@@ -1,0 +1,42 @@
+:root {
+  --bg: #F4F3EF; --surface: #FFFFFF; --ink: #0E0E0E; --muted: #66655F; --muted2: #4A4945; --line: #E4E2DC; --chip: #DAD8D1;
+  --accent: #FF4A1C; --partner: #2F54EB; --ok: #1FAF5B; --ok-text: #11663A; --alert: #A3300F;
+  --sans: 'Inter Tight', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.screen { min-height: 100dvh; max-width: 480px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 24px); display: flex; flex-direction: column; }
+.brand { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.brand i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; }
+.brand i::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.h1 { margin: 28px 0 0; font-size: 38px; line-height: 1; font-weight: 700; letter-spacing: -0.04em; }
+.sub { margin: 10px 0 0; font-size: 15px; line-height: 1.45; color: var(--muted2); }
+.mono { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+.spacer { margin-top: auto; }
+.btn { min-height: 56px; border-radius: 18px; border: 0; background: var(--ink); color: #fff; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; text-decoration: none; }
+.btn:disabled { opacity: 0.5; }
+.btn.ghost { background: var(--surface); color: var(--ink); border: 1.5px solid var(--chip); }
+.card { background: var(--surface); border-radius: 18px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.input { width: 100%; min-height: 52px; border-radius: 16px; border: 1.5px solid var(--chip); background: var(--surface); padding: 0 16px; font-size: 16px; }
+.err { color: var(--alert); font-size: 14px; margin: 8px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--chip); background: var(--surface); font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.chip[aria-pressed='true'] { background: var(--c, var(--ink)); border-color: var(--c, var(--ink)); color: #fff; }
+.chip .both { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.avatar { width: 80px; height: 80px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 700; color: #fff; background: var(--ink); box-shadow: 0 0 0 6px var(--bg); overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar.empty { background: var(--surface); color: #8C8B86; border: 2px dashed #CFCDC6; box-shadow: none; }
+.link-zone { margin-top: 24px; height: 220px; border-radius: 28px; position: relative; background-image: radial-gradient(#D6D4CD 1px, transparent 1.2px); background-size: 18px 18px; }
+.seg { display: flex; gap: 8px; }
+.seg button { flex: 1; min-height: 52px; border-radius: 999px; border: 1.5px solid var(--chip); background: var(--surface); display: flex; align-items: center; gap: 10px; padding: 0 16px 0 6px; font-size: 16px; }
+.seg button[aria-pressed='true'] { background: var(--c); border-color: var(--c); color: #fff; font-weight: 600; }
+.seg .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--c); flex: none; }
+.seg button[aria-pressed='true'] .av { background: #fff; color: var(--c); }
+.seg small { margin-left: auto; font-family: var(--mono); font-size: 11px; opacity: 0.8; }
+.trip { padding: 18px; border-radius: 22px; background: var(--ink); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.trip b { font-size: 24px; letter-spacing: -0.02em; }
+.pulse { animation: pulse 2s ease-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,74,28,.45); } 100% { box-shadow: 0 0 0 16px rgba(255,74,28,0); } }
