@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
   });
-  let body: { trip_id?: string; city?: string };
+  let body: { trip_id?: string; city?: string; day?: string; categories?: string[] };
   try { body = await req.json(); } catch { return json({ error: 'Requête invalide.' }, 400); }
   if (!body.trip_id) return json({ error: 'Voyage manquant.' }, 400);
 
@@ -32,14 +32,19 @@ Deno.serve(async (req) => {
   const { data: profs } = await sb.from('profiles').select('tastes, pace').in('id', (members ?? []).map((m) => m.user_id));
   const { data: existing } = await sb.from('ideas').select('title').eq('trip_id', trip.id);
 
+  const cats = (Array.isArray(body.categories) ? body.categories : []).filter((c) => typeof c === 'string').slice(0, 10).map((c) => c.slice(0, 30));
+  const city = typeof body.city === 'string' ? body.city.trim().slice(0, 60) : '';
+  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
   const all = (profs ?? []).flatMap((p) => p.tastes ?? []);
   const common = all.filter((t, i) => all.indexOf(t) !== i);
   const tastes = [...new Set(all)].map((t) => TASTE[t] ?? t);
-  const prompt = `Tu aides un couple à préparer son voyage "${trip.title}" (${trip.start_date} → ${trip.end_date})${body.city ? `, en ce moment pour la ville : ${body.city}` : ''}.
+  const prompt = `Tu aides un couple à préparer son voyage "${trip.title}" (${trip.start_date} → ${trip.end_date}).
 Leurs goûts : ${tastes.join(', ') || 'non précisés'}. Goûts communs prioritaires : ${[...new Set(common)].map((t) => TASTE[t] ?? t).join(', ') || 'aucun'}.
 Déjà proposé (à ne pas répéter) : ${(existing ?? []).map((e) => e.title).join(' ; ') || 'rien'}.
+${cats.length ? `Types d'activités demandés UNIQUEMENT : ${cats.join(', ')}.` : 'Mélange obligatoirement les types : restaurants, street food, balades, randonnée, culture, sorties, shopping, bars…'}
+${city ? `Lieu imposé : ${city} et ses environs proches.` : ''}${day ? ` Pour la journée du ${day} (tiens compte du jour de la semaine et des fermetures habituelles).` : ''}
 Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUEMENT par un tableau JSON, sans texte autour :
-[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"MARCHE|STREET FOOD|GASTRONOMIE|TEMPLES|ONSEN|NUIT|SHOPPING|MUSÉE|ANIME|PHOTO|ATELIER|NATURE","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu pour une recherche Google Maps"}]`;
+[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"RESTAURANT|STREET FOOD|RANDONNÉE|BALADE|SORTIE|BAR|SHOPPING|CULTURE|ONSEN|NATURE|ATELIER","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu pour une recherche Google Maps"}]`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -64,7 +69,7 @@ Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUE
   const s = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : null);
   const rows = list.filter((x) => x && typeof x.title === 'string').slice(0, 8).map((x) => ({
     trip_id: trip.id, title: s(x.title, 120)!, city: s(x.city, 60), why: s(x.why, 300), tag: s(x.tag, 20),
-    price: s(x.price, 40), duration: s(x.duration, 30), query: s(x.query, 120)
+    price: s(x.price, 40), duration: s(x.duration, 30), query: s(x.query, 120), day
   }));
   if (!rows.length) return json({ error: 'Aucune idée reçue, réessaie.' }, 502);
   const { error } = await sb.from('ideas').insert(rows);
