@@ -64,6 +64,7 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
 
       <div className="spacer" style={{ paddingTop: 20 }}>
         <button className="btn ghost sm" onClick={onTastes}>Nos goûts</button>
+        <p className="mono" style={{ textAlign: 'center', margin: '12px 0 0' }}>Version {__APP_VERSION__}</p>
       </div>
       {adding && <TripForm islandId={island.id} onClose={() => setAdding(false)} />}
     </main>
