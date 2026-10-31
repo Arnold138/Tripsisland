@@ -44,7 +44,7 @@ Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUE
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] })
   });
   if (!r.ok) {
     const detail = await r.text();
@@ -55,9 +55,10 @@ Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUE
     return json({ error: msg }, 502);
   }
   const out = await r.json();
-  const text: string = out.content?.[0]?.text ?? '';
+  // La réponse peut contenir plusieurs blocs (réflexion, texte) : on ne garde que le texte.
+  const text: string = (out.content ?? []).filter((b: any) => b?.type === 'text').map((b: any) => b.text).join('\n');
   let list: any[] = [];
-  try { list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch { console.error('parse', text.slice(0, 300)); return json({ error: 'Réponse IA illisible, réessaie.' }, 502); }
+  try { list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch { console.error('parse', out.stop_reason, JSON.stringify((out.content ?? []).map((b: any) => b?.type)), text.slice(0, 300)); return json({ error: 'Réponse IA illisible, réessaie.' }, 502); }
 
   // Validation stricte avant écriture.
   const s = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : null);
