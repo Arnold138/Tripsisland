@@ -56,3 +56,12 @@ describe('trajets estimés', () => {
     expect(dirLink({ lat: 1, lon: 2, title: 'x' }, { lat: 3, lon: 4 }, 'walking')).toContain('origin=3,4&destination=1%2C2&travelmode=walking');
   });
 });
+
+import { readFileSync } from 'node:fs';
+import { readMeta } from '../lib/photo';
+describe('photos', () => {
+  it('lit le lieu GPS et la date d’une photo', async () => {
+    const m = await readMeta(new Uint8Array(readFileSync(new URL('./fixtures/gps-lisbonne.jpg', import.meta.url))));
+    expect(m.lat).toBeCloseTo(38.7139, 3); expect(m.lon).toBeCloseTo(-9.1394, 3); expect(m.taken_at).not.toBeNull();
+  });
+});
