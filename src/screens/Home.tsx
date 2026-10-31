@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase, type Trip } from '../lib/supabase';
 import { daysUntil } from '../lib/logic';
 import TripForm from './TripForm';
+import Globe from './Globe';
 import type { Ctx } from '../App';
 
 const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -10,10 +11,18 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
   const { island, me, partner } = ctx;
   const [trips, setTrips] = useState<Trip[]>([]);
   const [adding, setAdding] = useState(false);
+  const [focus, setFocus] = useState<string | null>(null);
+  const [photoPts, setPhotoPts] = useState<{ lat: number; lon: number }[]>([]);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('trips').select('*').eq('island_id', island.id).order('start_date');
-    setTrips((data ?? []) as Trip[]);
+    const list = (data ?? []) as Trip[];
+    setTrips(list);
+    if (list.length) {
+      const { data: ph } = await supabase.from('photos').select('lat,lon').in('trip_id', list.map((t) => t.id)).not('lat', 'is', null).limit(500);
+      setPhotoPts((ph ?? []) as { lat: number; lon: number }[]);
+    }
+    setFocus((f) => f ?? list.find((t) => t.status === 'upcoming')?.id ?? list[0]?.id ?? null);
   }, [island.id]);
 
   useEffect(() => {
@@ -54,7 +63,25 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
         </div>
       </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>
+      <div style={{ marginTop: 8 }}>
+        <Globe pins={trips.filter((t) => t.lat != null && t.lon != null).map((t) => ({ id: t.id, name: t.title, lat: t.lat!, lon: t.lon!, color: t.color }))} photos={photoPts} focus={focus} />
+      </div>
+      <div className="days" role="group" aria-label="Voir sur le globe" style={{ marginTop: 4 }}>
+        {trips.map((t) => (
+          <button key={t.id} className="chip" aria-pressed={focus === t.id} style={{ flex: 'none', ['--c' as string]: 'var(--ink)' }} onClick={() => setFocus(t.id)}>
+            <span className="dot" style={{ background: t.color }} />{t.title}
+          </button>
+        ))}
+      </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        {[['Pays', new Set(trips.map((t) => t.title)).size], ['Jours', trips.reduce((n, t) => n + (t.start_date && t.end_date ? Math.round((+new Date(t.end_date) - +new Date(t.start_date)) / 864e5) + 1 : 0), 0)], ['Photos', photoPts.length]].map(([k, v]) => (
+          <div key={k} className="card" style={{ flex: 1, flexDirection: 'column', alignItems: 'center', gap: 0, padding: '10px 6px' }}>
+            <b style={{ fontSize: 22, letterSpacing: '-.03em' }}>{v}</b><span className="mono" style={{ fontSize: 10 }}>{k}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
         {upcoming.length > 0 && <p className="mono" style={{ margin: 0 }}>À venir</p>}
         {upcoming.map(card)}
         {past.length > 0 && <p className="mono" style={{ margin: '12px 0 0' }}>Souvenirs</p>}

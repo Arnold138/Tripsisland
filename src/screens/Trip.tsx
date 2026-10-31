@@ -3,6 +3,9 @@ import { supabase, type Activity, type Idea, type Swipe, type Trip as TripT } fr
 import { byTime, mapsLink, tripDays } from '../lib/logic';
 import ActivitySheet from './ActivitySheet';
 import TripForm from './TripForm';
+import Photos from './Photos';
+
+const CATS = ['Restaurant', 'Street food', 'Randonnée', 'Balade', 'Sortie', 'Bar', 'Shopping', 'Culture', 'Onsen', 'Nature', 'Atelier'];
 import type { Ctx } from '../App';
 
 const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '').toUpperCase();
@@ -12,7 +15,10 @@ const long = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR'
 export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: TripT; onBack: () => void }) {
   const { me, partner, island } = ctx;
   const [trip, setTrip] = useState(initial);
-  const [tab, setTab] = useState<'plan' | 'ideas'>('plan');
+  const [tab, setTab] = useState<'plan' | 'ideas' | 'photos'>('plan');
+  const [cats, setCats] = useState<string[]>([]);
+  const [city, setCity] = useState('');
+  const [ideaDay, setIdeaDay] = useState('');
   const days = useMemo(() => tripDays(trip.start_date, trip.end_date), [trip.start_date, trip.end_date]);
   const [day, setDay] = useState<string | null>(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -72,7 +78,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
   };
   const generate = async () => {
     setGen('Recherche d’idées…');
-    const { data, error } = await supabase.functions.invoke('ideas', { body: { trip_id: trip.id, city: trip.title } });
+    const { data, error } = await supabase.functions.invoke('ideas', { body: { trip_id: trip.id, city: city.trim() || null, day: ideaDay || null, categories: cats } });
     let msg: string | null = data?.error ?? null;
     if (error) {
       // Le serveur renvoie un message précis : on l'affiche au lieu d'un message générique.
@@ -97,7 +103,8 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
 
       <div className="tabs" role="group" aria-label="Vue" style={{ marginTop: 16 }}>
         <button aria-pressed={tab === 'plan'} onClick={() => setTab('plan')}>Programme</button>
-        <button aria-pressed={tab === 'ideas'} onClick={() => setTab('ideas')}>Idées · Match{queue.length ? ` (${queue.length})` : ''}</button>
+        <button aria-pressed={tab === 'ideas'} onClick={() => setTab('ideas')}>Idées{queue.length ? ` (${queue.length})` : ''}</button>
+        <button aria-pressed={tab === 'photos'} onClick={() => setTab('photos')}>Souvenirs</button>
       </div>
 
       {tab === 'plan' && (
@@ -136,6 +143,8 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
         </>
       )}
 
+      {tab === 'photos' && <Photos tripId={trip.id} />}
+
       {tab === 'ideas' && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
           {current ? (
@@ -149,7 +158,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
                 </div>
                 <div className="body">
                   <h2 style={{ margin: 0, fontSize: 22, letterSpacing: '-.02em' }}>{current.title}</h2>
-                  <span className="mono">{[current.duration, current.price].filter(Boolean).join(' · ')}</span>
+                  <span className="mono">{[current.duration, current.price, current.day ? 'prévu le ' + new Date(current.day + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' }) : null].filter(Boolean).join(' · ')}</span>
                   {current.why && <p className="sub" style={{ margin: 0 }}>{current.why}</p>}
                   {partnerYes(current.id) && <p style={{ margin: 0, color: 'var(--partner)', fontWeight: 600, fontSize: 14 }}>{partner?.name?.split(' ')[0] ?? 'Ton binôme'} a déjà dit oui</p>}
                 </div>
@@ -162,7 +171,26 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
           ) : (
             <p className="sub" style={{ textAlign: 'center' }}>{ideas.length ? 'Tu as tout swipé. Les matchs arrivent dans « À placer ».' : 'Pas encore d’idées pour ce voyage.'}</p>
           )}
-          <button className="btn ghost" onClick={generate} disabled={!!gen && gen.startsWith('Recherche')}>{gen?.startsWith('Recherche') ? gen : 'Proposer 8 idées selon nos goûts'}</button>
+          <section className="card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12, padding: 16 }} aria-label="Filtres des idées">
+            <p className="mono" style={{ margin: 0 }}>Quel type ? (rien = un mélange de tout)</p>
+            <div className="chips">
+              {CATS.map((c) => (
+                <button key={c} className="chip" aria-pressed={cats.includes(c)} style={{ minHeight: 38, fontSize: 14, padding: '0 12px' }}
+                  onClick={() => setCats((x) => (x.includes(c) ? x.filter((y) => y !== c) : [...x, c]))}>{c}</button>
+              ))}
+            </div>
+            <div className="row">
+              <div className="field" style={{ flex: 1 }}><label htmlFor="icity">Ville ou quartier</label>
+                <input id="icity" className="input" list="icities" placeholder="Partout" value={city} onChange={(e) => setCity(e.target.value)} />
+                <datalist id="icities">{[...new Set(ideas.map((i) => i.city).filter(Boolean))].map((c) => <option key={c!} value={c!} />)}</datalist></div>
+              <div className="field" style={{ flex: 1 }}><label htmlFor="iday">Pour quel jour</label>
+                <select id="iday" className="input" value={ideaDay} onChange={(e) => setIdeaDay(e.target.value)}>
+                  <option value="">N’importe quand</option>
+                  {days.map((d, i) => <option key={d} value={d}>J{i + 1} · {new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</option>)}
+                </select></div>
+            </div>
+          </section>
+          <button className="btn" onClick={generate} disabled={!!gen && gen.startsWith('Recherche')}>{gen?.startsWith('Recherche') ? gen : 'Proposer 8 idées avec ces filtres'}</button>
           {gen && !gen.startsWith('Recherche') && <p className="err" role="alert">{gen}</p>}
         </div>
       )}

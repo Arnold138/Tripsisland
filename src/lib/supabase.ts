@@ -13,6 +13,7 @@ export type Island = { id: string; name: string; invite_code: string; created_by
 export type Trip = {
   id: string; island_id: string; title: string; country: string | null;
   start_date: string | null; end_date: string | null; status: 'upcoming' | 'past'; color: string;
+  lat: number | null; lon: number | null;
 };
 export type Activity = {
   id: string; trip_id: string; day: string | null; time: string | null; title: string; place_id: string | null;
@@ -21,7 +22,8 @@ export type Activity = {
 };
 export type Idea = {
   id: string; trip_id: string; title: string; city: string | null; why: string | null; tag: string | null;
-  price: string | null; duration: string | null; query: string | null; matched: boolean;
+  price: string | null; duration: string | null; query: string | null; matched: boolean; day: string | null;
 };
 export type Place = { id: string; name: string; address: string; lat: number | null; lon: number | null; status: string | null; type: string | null };
 export type Swipe = { idea_id: string; user_id: string; vote: 'yes' | 'no' };
+export type Photo = { id: string; trip_id: string; path: string; lat: number | null; lon: number | null; taken_at: string | null; created_by: string | null };

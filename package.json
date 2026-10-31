@@ -1,6 +1,6 @@
 {
   "name": "tripisland",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -17,6 +17,7 @@
   "homepage": "https://github.com/Arnold138/tripsisland#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "exifr": "^7.1.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

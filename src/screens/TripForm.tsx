@@ -19,7 +19,14 @@ export default function TripForm({ islandId, trip, onClose, onDeleted }: Props) 
     if (!title.trim()) { setErr('Donne un nom au voyage.'); return; }
     if (start && end && end < start) { setErr('La date de fin est avant le départ.'); return; }
     setBusy(true);
-    const row = { title: title.trim(), start_date: start || null, end_date: end || null, color, status: past ? 'past' : 'upcoming', updated_at: new Date().toISOString() };
+    // Place la destination sur le globe (une seule recherche, seulement si le nom change).
+    let coords: { lat: number | null; lon: number | null } = { lat: trip?.lat ?? null, lon: trip?.lon ?? null };
+    if (!trip || trip.title !== title.trim() || trip.lat == null) {
+      const { data } = await supabase.functions.invoke('places-search', { body: { query: title.trim() } });
+      const p = data?.places?.[0];
+      if (p?.lat != null) coords = { lat: p.lat, lon: p.lon };
+    }
+    const row = { ...coords, title: title.trim(), start_date: start || null, end_date: end || null, color, status: past ? 'past' : 'upcoming', updated_at: new Date().toISOString() };
     const { error } = trip
       ? await supabase.from('trips').update(row).eq('id', trip.id)
       : await supabase.from('trips').insert({ ...row, island_id: islandId });

@@ -2,6 +2,11 @@
 
 Vos voyages à deux : un espace partagé, synchronisé en direct entre vos deux téléphones.
 
+## Nouveautés de la version 0.3 — Globe, souvenirs et filtres
+- **Globe 3D sur l'accueil** : vrais continents en points, vos voyages en couleur, arcs depuis la France, rotation au doigt, toucher un voyage pour y aller.
+- **Souvenirs** : ajoutez vos photos à un voyage ; leur lieu GPS et leur date s'affichent sur le globe (points jaunes).
+- **Idées filtrées** : choisissez le type (restaurant, street food, randonnée, balade, sortie, bar, shopping…), la ville et le jour **avant** de lancer l'IA. Sans filtre, l'IA mélange tous les types. Une idée « matchée » arrive directement dans le bon jour.
+
 ## Nouveautés de la version 0.2 — Voyages et programme
 - **Voyages modifiables** : ajouter, renommer, changer les dates et la couleur, supprimer, marquer comme souvenir.
 - **Japon** : départ corrigé au **22 février 2027**.
