@@ -210,7 +210,7 @@ button { cursor: pointer; }
 .ask textarea::placeholder { color: #9A988F; }
 .plane-loader { text-align: center; padding: 8px 0 4px; }
 .plane-loader p { margin: 0; font-size: 14px; color: var(--muted2); font-weight: 600; }
-.added { margin: 0; display: flex; gap: 8px; align-items: center; background: #E6F6EC; color: var(--ok-text); border-radius: 14px; padding: 10px 14px; font-weight: 600; font-size: 14px; }
+.added { margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #E6F6EC; color: var(--ok-text); border-radius: 14px; padding: 10px 14px; font-weight: 600; font-size: 14px; }
 .place { background: var(--surface); border-radius: 20px; overflow: hidden; }
 .place.on { box-shadow: 0 0 0 2px var(--ink); }
 .place-main { width: 100%; border: 0; background: none; text-align: left; display: flex; align-items: center; gap: 12px; padding: 14px; }
@@ -219,3 +219,36 @@ button { cursor: pointer; }
 .sm-pill { flex: none; min-height: 36px; font-size: 13px; padding: 0 12px; }
 .place-add { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
 @media (prefers-reduced-motion: reduce) { .search-screen { animation: none; } }
+
+/* v0.7 — à placer, affluence */
+.day.todo { background: #FFF1EA; }
+.day.todo.has small { color: #A3300F; }
+.day.todo.has b { color: #A3300F; }
+.day.todo[aria-pressed='true'] { background: var(--accent); }
+.day.todo[aria-pressed='true'] small, .day.todo[aria-pressed='true'] b { color: var(--ink); }
+.todo-bar { border: 0; width: 100%; display: flex; align-items: center; gap: 8px; background: #FFF1EA; color: #A3300F; border-radius: 14px; padding: 10px 14px; font-size: 14px; text-align: left; min-height: 44px; }
+.todo-bar span { margin-left: auto; font-weight: 700; }
+.act2-meta { display: flex; align-items: center; gap: 8px; padding: 0 16px 8px; flex-wrap: wrap; }
+.crowd-badge { border: 0; background: var(--bg); border-radius: 999px; min-height: 32px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; }
+.crowd-badge.empty { color: var(--muted2); font-weight: 600; border: 1.5px dashed var(--chip); background: none; }
+.crowd-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 13px; }
+.crowd-bars i { width: 3px; border-radius: 2px; }
+.place-days { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 0 12px 10px 16px; scrollbar-width: none; }
+.place-days::-webkit-scrollbar { display: none; }
+.place-days button { flex: none; border: 1.5px solid var(--chip); background: var(--surface); border-radius: 999px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 600; text-transform: capitalize; }
+.crowd-chart { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); gap: 3px; height: 120px; align-items: end; }
+.crowd-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.crowd-col span { width: 100%; border-radius: 4px 4px 2px 2px; }
+.crowd-col small { font-family: var(--mono); font-size: 9px; color: var(--muted); height: 11px; }
+.crowd-line { margin: 0; font-size: 15px; display: flex; gap: 8px; }
+.crowd-line b { flex: none; width: 82px; font-size: 13px; padding-top: 1px; }
+.crowd-line.ok b { color: var(--ok-text); } .crowd-line.bad b { color: var(--alert); }
+.day-picker { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.day-picker::-webkit-scrollbar { display: none; }
+.day-picker button { flex: none; min-width: 52px; min-height: 52px; border-radius: 14px; border: 1.5px solid var(--chip); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.day-picker button small { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight: 500; }
+.day-picker button[aria-pressed='true'] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.day-picker button[aria-pressed='true'] small { color: #B9B8B2; }
+.day-picker button.tbd { min-width: 84px; }
+
+.added button { border: 0; background: var(--ok-text); color: #fff; border-radius: 10px; min-height: 36px; padding: 0 12px; font-weight: 700; font-size: 13px; }

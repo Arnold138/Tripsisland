@@ -4,13 +4,14 @@ import { daysUntil } from '../lib/logic';
 import TripForm from './TripForm';
 import Search from './Search';
 import Icon from './Icon';
+import type { Tab } from './Trip';
 import type { Ctx } from '../App';
 
 const Globe = lazy(() => import('./Globe'));
 
 const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: () => void; onOpen: (t: Trip) => void }) {
+export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: () => void; onOpen: (t: Trip, tab?: Tab, day?: string | null) => void }) {
   const { island, me, partner } = ctx;
   const [trips, setTrips] = useState<Trip[]>([]);
   const [searching, setSearching] = useState(false);
@@ -106,7 +107,7 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
         <button className="btn ghost sm" onClick={onTastes}>Nos goûts</button>
         <p className="mono" style={{ textAlign: 'center', margin: '12px 0 0' }}>Version {__APP_VERSION__}</p>
       </div>
-      {searching && <Search islandId={island.id} onClose={() => setSearching(false)} />}
+      {searching && <Search islandId={island.id} onClose={() => setSearching(false)} onShow={(id, day) => { const t = trips.find((x) => x.id === id); if (t) onOpen(t, 'days', day); }} />}
       {adding && <TripForm islandId={island.id} past={adding === 'past'} onClose={() => setAdding(null)} onCreated={(t) => { if (t.status === 'past') onOpen(t); }} />}
     </main>
   );

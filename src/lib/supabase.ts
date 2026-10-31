@@ -19,7 +19,7 @@ export type Activity = {
   id: string; trip_id: string; day: string | null; time: string | null; title: string; place_id: string | null;
   address: string | null; lat: number | null; lon: number | null; notes: string | null; tag: string | null; done: boolean;
   created_by: string | null; station: string | null; query: string | null; geo_tried: boolean;
-  done_at: string | null; created_at: string; updated_at: string | null;
+  done_at: string | null; created_at: string; updated_at: string | null; crowd?: unknown | null;
 };
 export type Message = { id: string; trip_id: string; user_id: string; body: string; created_at: string };
 export type Idea = {

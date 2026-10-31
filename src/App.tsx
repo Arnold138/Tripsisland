@@ -6,7 +6,7 @@ import Login from './screens/Login';
 import IslandScreen from './screens/Island';
 import Tastes from './screens/Tastes';
 import Home from './screens/Home';
-import TripScreen from './screens/Trip';
+import TripScreen, { type Tab } from './screens/Trip';
 
 rememberInviteFromUrl();
 
@@ -18,7 +18,7 @@ export default function App() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'tastes'>('home');
-  const [openTrip, setOpenTrip] = useState<Trip | null>(null);
+  const [openTrip, setOpenTrip] = useState<{ trip: Trip; tab?: Tab; day?: string | null } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -68,6 +68,6 @@ export default function App() {
 
   const ctx: Ctx = { me, partner, island, reload: load };
   if (view === 'tastes' || me.tastes.length === 0) return <Tastes ctx={ctx} onDone={() => setView('home')} />;
-  if (openTrip) return <TripScreen key={openTrip.id} ctx={ctx} trip={openTrip} onBack={() => setOpenTrip(null)} />;
-  return <Home ctx={ctx} onTastes={() => setView('tastes')} onOpen={setOpenTrip} />;
+  if (openTrip) return <TripScreen key={openTrip.trip.id + (openTrip.tab ?? '') + (openTrip.day ?? '')} ctx={ctx} trip={openTrip.trip} initialTab={openTrip.tab} initialDay={openTrip.day} onBack={() => setOpenTrip(null)} />;
+  return <Home ctx={ctx} onTastes={() => setView('tastes')} onOpen={(trip, tab, day) => setOpenTrip({ trip, tab, day })} />;
 }
