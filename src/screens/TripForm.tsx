@@ -3,14 +3,15 @@ import { supabase, type Trip } from '../lib/supabase';
 
 const COLORS = ['#FF4A1C', '#2F54EB', '#14B8A6', '#A855F7', '#E9A23B', '#0E0E0E'];
 
-type Props = { islandId: string; trip?: Trip | null; onClose: () => void; onDeleted?: () => void };
+type Props = { islandId: string; trip?: Trip | null; past?: boolean; onClose: () => void; onDeleted?: () => void; onCreated?: (t: Trip) => void };
 
-export default function TripForm({ islandId, trip, onClose, onDeleted }: Props) {
+export default function TripForm({ islandId, trip, past: pastDefault, onClose, onDeleted, onCreated }: Props) {
   const [title, setTitle] = useState(trip?.title ?? '');
   const [start, setStart] = useState(trip?.start_date ?? '');
   const [end, setEnd] = useState(trip?.end_date ?? '');
   const [color, setColor] = useState(trip?.color ?? COLORS[0]);
-  const [past, setPast] = useState(trip?.status === 'past');
+  const [past, setPast] = useState(trip ? trip.status === 'past' : !!pastDefault);
+  const [sure, setSure] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,14 +28,19 @@ export default function TripForm({ islandId, trip, onClose, onDeleted }: Props) 
       if (p?.lat != null) coords = { lat: p.lat, lon: p.lon };
     }
     const row = { ...coords, title: title.trim(), start_date: start || null, end_date: end || null, color, status: past ? 'past' : 'upcoming', updated_at: new Date().toISOString() };
-    const { error } = trip
-      ? await supabase.from('trips').update(row).eq('id', trip.id)
-      : await supabase.from('trips').insert({ ...row, island_id: islandId });
+    if (trip) {
+      const { error } = await supabase.from('trips').update(row).eq('id', trip.id);
+      setBusy(false);
+      if (error) setErr(error.message); else onClose();
+      return;
+    }
+    const { data, error } = await supabase.from('trips').insert({ ...row, island_id: islandId }).select().single();
     setBusy(false);
-    if (error) setErr(error.message); else onClose();
+    if (error) setErr(error.message); else { onClose(); if (data) onCreated?.(data as Trip); }
   };
   const remove = async () => {
-    if (!trip || !confirm(`Supprimer « ${trip.title} » et toutes ses activités ?`)) return;
+    if (!trip) return;
+    if (!sure) { setSure(true); return; } // deuxième appui pour confirmer, sans fenêtre système
     const { error } = await supabase.from('trips').delete().eq('id', trip.id);
     if (error) setErr(error.message); else { onClose(); onDeleted?.(); }
   };
@@ -43,7 +49,8 @@ export default function TripForm({ islandId, trip, onClose, onDeleted }: Props) 
     <>
       <div className="sheet-back" onClick={onClose} />
       <form className="sheet" onSubmit={save} aria-label={trip ? 'Modifier le voyage' : 'Nouveau voyage'}>
-        <h2>{trip ? 'Modifier le voyage' : 'Nouveau voyage'}</h2>
+        <h2>{trip ? 'Modifier le voyage' : past ? 'Ancien voyage' : 'Nouveau voyage'}</h2>
+        {!trip && past && <p className="sub" style={{ margin: 0 }}>Ajoutez-le, puis vos photos : leur lieu et leur date s’affichent sur le globe.</p>}
         <div className="field"><label htmlFor="tt">Destination</label>
           <input id="tt" className="input" placeholder="Japon, Islande, Lisbonne…" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
         <div className="row">
@@ -66,7 +73,7 @@ export default function TripForm({ islandId, trip, onClose, onDeleted }: Props) 
         </label>
         {err && <p className="err" role="alert">{err}</p>}
         <button className="btn" disabled={busy}>{trip ? 'Enregistrer' : 'Créer le voyage'}</button>
-        {trip && <button type="button" className="btn danger sm" onClick={remove}>Supprimer ce voyage</button>}
+        {trip && <button type="button" className="btn danger sm" onClick={remove}>{sure ? `Oui, supprimer « ${trip.title} » et tout son contenu` : 'Supprimer ce voyage'}</button>}
       </form>
     </>
   );

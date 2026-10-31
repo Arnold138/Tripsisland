@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase, type Activity, type Place } from '../lib/supabase';
-import { mapsLink } from '../lib/logic';
+import { dirLink } from '../lib/logic';
 
 type Props = { tripId: string; days: string[]; day: string | null; activity?: Activity | null; onClose: () => void };
 
@@ -46,6 +46,8 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
     const row = {
       title: title.trim(), day: d || null, time: time || null, notes: notes.trim() || null,
       place_id: place?.id ?? null, address: place?.address ?? null, lat: place?.lat ?? null, lon: place?.lon ?? null,
+      // Sans lieu choisi, la carte le cherchera une fois à partir du nom.
+      geo_tried: place?.lat != null || (activity?.title === title.trim() && !!activity?.geo_tried),
       updated_at: new Date().toISOString()
     };
     const { error } = activity
@@ -96,7 +98,7 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
         <button className="btn">{activity ? 'Enregistrer' : 'Ajouter'}</button>
         {activity && (
           <div className="row">
-            <a className="btn ghost sm" href={mapsLink(activity)} target="_blank" rel="noopener">Y aller (Maps)</a>
+            <a className="btn ghost sm" href={dirLink(activity)} target="_blank" rel="noopener">Itinéraire</a>
             <button type="button" className="btn danger sm" onClick={remove}>Supprimer</button>
           </div>
         )}

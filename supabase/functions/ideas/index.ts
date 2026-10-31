@@ -44,7 +44,7 @@ Déjà proposé (à ne pas répéter) : ${(existing ?? []).map((e) => e.title).j
 ${cats.length ? `Types d'activités demandés UNIQUEMENT : ${cats.join(', ')}.` : 'Mélange obligatoirement les types : restaurants, street food, balades, randonnée, culture, sorties, shopping, bars…'}
 ${city ? `Lieu imposé : ${city} et ses environs proches.` : ''}${day ? ` Pour la journée du ${day} (tiens compte du jour de la semaine et des fermetures habituelles).` : ''}
 Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUEMENT par un tableau JSON, sans texte autour :
-[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"RESTAURANT|STREET FOOD|RANDONNÉE|BALADE|SORTIE|BAR|SHOPPING|CULTURE|ONSEN|NATURE|ATELIER","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu pour une recherche Google Maps"}]`;
+[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"RESTAURANT|STREET FOOD|RANDONNÉE|BALADE|SORTIE|BAR|SHOPPING|CULTURE|ONSEN|NATURE|ATELIER","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu + ville, pour une recherche Google Maps","station":"gare ou station de métro la plus proche (nom exact, ex. Shinjuku-gyoemmae)"}]`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -69,7 +69,7 @@ Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUE
   const s = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : null);
   const rows = list.filter((x) => x && typeof x.title === 'string').slice(0, 8).map((x) => ({
     trip_id: trip.id, title: s(x.title, 120)!, city: s(x.city, 60), why: s(x.why, 300), tag: s(x.tag, 20),
-    price: s(x.price, 40), duration: s(x.duration, 30), query: s(x.query, 120), day
+    price: s(x.price, 40), duration: s(x.duration, 30), query: s(x.query, 120), station: s(x.station, 60), day
   }));
   if (!rows.length) return json({ error: 'Aucune idée reçue, réessaie.' }, 502);
   const { error } = await sb.from('ideas').insert(rows);

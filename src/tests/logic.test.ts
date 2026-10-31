@@ -35,3 +35,24 @@ describe('jours du voyage', () => {
     expect(byTime([{ time: null }, { time: '18:00' }, { time: '09:30' }]).map((x) => x.time)).toEqual(['09:30', '18:00', null]);
   });
 });
+
+import { estimateLeg, fmtMin, dirLink } from '../lib/logic';
+describe('trajets estimés', () => {
+  it('Shinjuku Gyoen → Koishikawa Kōraku-en : métro, environ une demi-heure', () => {
+    const l = estimateLeg({ lat: 35.6852, lon: 139.7101 }, { lat: 35.7056, lon: 139.7497 });
+    expect(l.mode).toBe('transit');
+    expect(l.minutes).toBeGreaterThan(20); expect(l.minutes).toBeLessThan(35);
+  });
+  it('lieux voisins : à pied', () => {
+    const l = estimateLeg({ lat: 35.6938, lon: 139.7034 }, { lat: 35.6950, lon: 139.6995 });
+    expect(l.mode).toBe('walking'); expect(l.minutes).toBeLessThan(10);
+  });
+  it('Tokyo → Kyoto : train rapide', () => {
+    const l = estimateLeg({ lat: 35.681, lon: 139.767 }, { lat: 34.985, lon: 135.758 });
+    expect(l.mode).toBe('train'); expect(l.minutes).toBeGreaterThan(120);
+  });
+  it('formats', () => {
+    expect(fmtMin(45)).toBe('45 min'); expect(fmtMin(125)).toBe('2 h05');
+    expect(dirLink({ lat: 1, lon: 2, title: 'x' }, { lat: 3, lon: 4 }, 'walking')).toContain('origin=3,4&destination=1%2C2&travelmode=walking');
+  });
+});
