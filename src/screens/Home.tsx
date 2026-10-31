@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { supabase, type Trip } from '../lib/supabase';
 import { daysUntil } from '../lib/logic';
 import TripForm from './TripForm';
+import Search from './Search';
+import Icon from './Icon';
 import type { Ctx } from '../App';
 
 const Globe = lazy(() => import('./Globe'));
@@ -11,6 +13,7 @@ const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateStri
 export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: () => void; onOpen: (t: Trip) => void }) {
   const { island, me, partner } = ctx;
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState<null | 'new' | 'past'>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [photoPts, setPhotoPts] = useState<{ lat: number; lon: number }[]>([]);
@@ -55,7 +58,10 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
     <main className="screen">
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <p className="brand" style={{ fontSize: 14 }}><i aria-hidden="true" />TripIsland</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <p className="brand" style={{ fontSize: 14 }}><i aria-hidden="true" />TripIsland</p>
+            <button className="search-chip" onClick={() => setSearching(true)} aria-label="Rechercher un lieu"><Icon name="search" size={16} /> Rechercher</button>
+          </div>
           <h1 className="h1" style={{ marginTop: 8, fontSize: 34 }}>Vos voyages</h1>
         </div>
         <div role="img" aria-label="Vous deux" style={{ display: 'flex' }}>
@@ -100,6 +106,7 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
         <button className="btn ghost sm" onClick={onTastes}>Nos goûts</button>
         <p className="mono" style={{ textAlign: 'center', margin: '12px 0 0' }}>Version {__APP_VERSION__}</p>
       </div>
+      {searching && <Search islandId={island.id} onClose={() => setSearching(false)} />}
       {adding && <TripForm islandId={island.id} past={adding === 'past'} onClose={() => setAdding(null)} onCreated={(t) => { if (t.status === 'past') onOpen(t); }} />}
     </main>
   );
