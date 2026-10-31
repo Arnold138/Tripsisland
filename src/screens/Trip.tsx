@@ -73,7 +73,13 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
   const generate = async () => {
     setGen('Recherche d’idées…');
     const { data, error } = await supabase.functions.invoke('ideas', { body: { trip_id: trip.id, city: trip.title } });
-    setGen(error || data?.error ? (data?.error ?? 'IA indisponible pour le moment (clé Claude pas encore branchée ?).') : null);
+    let msg: string | null = data?.error ?? null;
+    if (error) {
+      // Le serveur renvoie un message précis : on l'affiche au lieu d'un message générique.
+      try { msg = (await (error as { context?: Response }).context?.json())?.error ?? null; } catch { /* corps illisible */ }
+      msg = msg ?? 'IA indisponible pour le moment, réessaie dans un instant.';
+    }
+    setGen(msg);
     load();
   };
   const toggleDone = async (a: Activity) => { await supabase.from('activities').update({ done: !a.done }).eq('id', a.id); };

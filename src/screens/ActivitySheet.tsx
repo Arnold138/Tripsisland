@@ -27,7 +27,11 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
       setSearching(true);
       const { data, error } = await supabase.functions.invoke('places-search', { body: { query: q } });
       setSearching(false);
-      if (error) { setErr('Recherche indisponible pour le moment (clé Google pas encore branchée ?).'); return; }
+      if (error) {
+        let m: string | null = null;
+        try { m = (await (error as { context?: Response }).context?.json())?.error ?? null; } catch { /* corps illisible */ }
+        setErr(m ?? 'Recherche indisponible pour le moment.'); return;
+      }
       setErr(data?.error ?? null);
       setResults(data?.places ?? []);
     }, 600);

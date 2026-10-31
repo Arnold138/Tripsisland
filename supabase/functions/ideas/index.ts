@@ -46,11 +46,18 @@ Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUE
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
   });
-  if (!r.ok) return json({ error: 'IA indisponible pour le moment.' }, 502);
+  if (!r.ok) {
+    const detail = await r.text();
+    console.error('anthropic', r.status, detail.slice(0, 300));
+    const msg = r.status === 401 ? 'Clé Claude refusée (vérifie le secret ANTHROPIC_API_KEY).'
+      : r.status === 400 && detail.includes('credit') ? 'Crédit Claude insuffisant sur ce compte.'
+      : r.status === 404 ? 'Modèle Claude introuvable.' : `IA indisponible (erreur ${r.status}).`;
+    return json({ error: msg }, 502);
+  }
   const out = await r.json();
   const text: string = out.content?.[0]?.text ?? '';
   let list: any[] = [];
-  try { list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch { return json({ error: 'Réponse IA illisible, réessaie.' }, 502); }
+  try { list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch { console.error('parse', text.slice(0, 300)); return json({ error: 'Réponse IA illisible, réessaie.' }, 502); }
 
   // Validation stricte avant écriture.
   const s = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : null);
