@@ -71,7 +71,7 @@ export default function MapTab({ d, day, setDay }: { d: TripData; day: string | 
     if (pts.length && !sel) {
       const b = new maplibregl.LngLatBounds();
       pts.forEach((p) => b.extend([p.lon, p.lat]));
-      m.fitBounds(b, { padding: { top: 110, bottom: 70, left: 50, right: 50 }, maxZoom: 15, duration: 700 });
+      m.fitBounds(b, { padding: { top: 110, bottom: 70, left: 50, right: 50 }, maxZoom: 14, duration: 700 });
     }
   }, [key, ready, all]); // eslint-disable-line react-hooks/exhaustive-deps
 

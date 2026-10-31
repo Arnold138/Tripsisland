@@ -6,6 +6,8 @@ import { longDay, type TripData } from '../Trip';
 const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '').toUpperCase();
 const num = (d: string) => new Date(d + 'T12:00:00').getDate();
 const MODE: Record<Leg['mode'], [string, string]> = { walking: ['walk', 'à pied'], transit: ['metro', 'en métro / train'], train: ['train', 'en train rapide'] };
+/** Adresse courte : sans « Japon », sans code postal. */
+export const shortAddr = (s: string) => s.replace(/^Japon,\s*/, '').replace(/,?\s*Japon$/, '').replace(/〒?\s*\d{3}-\d{4}\s*/, '').trim();
 const has = (a: Activity): a is Activity & { lat: number; lon: number } => a.lat != null && a.lon != null;
 
 /** Une activité : on voit tout de suite quoi faire (Itinéraire, C'est fait), et on la touche pour la modifier. */
@@ -22,7 +24,7 @@ export function ActivityCard({ a, d, from }: { a: Activity; d: TripData; from?: 
         <b>{a.title}</b>
         {a.notes && <span className="m clamp">{a.notes}</span>}
         {(a.station || a.address) && (
-          <span className="where"><Icon name={a.station ? 'metro' : 'pin'} size={15} />{a.station ? `Station la plus proche : ${a.station}` : a.address}</span>
+          <span className="where"><Icon name={a.station ? 'metro' : 'pin'} size={15} />{a.station ? `Station la plus proche : ${a.station}` : shortAddr(a.address!)}</span>
         )}
       </button>
       <div className="act2-actions">

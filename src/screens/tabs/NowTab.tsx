@@ -55,7 +55,7 @@ export default function NowTab({ d }: { d: TripData }) {
         <div className="shortcuts">
           <button onClick={() => d.edit('new', firstEmpty ?? focusDay ?? null)}><Icon name="plus" /><b>Ajouter</b><span>{firstEmpty ? `Jour ${days.indexOf(firstEmpty) + 1} est vide` : 'une activité'}</span></button>
           <button onClick={() => d.go('match')}><Icon name="heart" /><b>Idées</b><span>{toSwipe ? `${toSwipe} à swiper` : 'en proposer'}</span></button>
-          <button onClick={() => d.go('map', focusDay ?? null)}><Icon name="map" /><b>Carte</b><span>{acts.filter((a) => a.lat != null).length} lieux placés</span></button>
+          <button onClick={() => d.go('map', focusDay ?? null)}><Icon name="map" /><b>Carte</b><span>{(() => { const n = acts.filter((a) => a.lat != null).length; return n > 1 ? `${n} lieux placés` : n ? '1 lieu placé' : 'aucun lieu'; })()}</span></button>
           <button onClick={() => d.go('us')}><Icon name="chat" /><b>{partnerName}</b><span>{lastMsg ? '« ' + lastMsg.body.slice(0, 22) + (lastMsg.body.length > 22 ? '… »' : ' »') : 'lui écrire'}</span></button>
         </div>
       )}

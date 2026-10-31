@@ -31,7 +31,10 @@ export async function cosyStyle(kind: 'globe' | 'city'): Promise<StyleSpecificat
     else if (l.id.startsWith('boundary')) { p['line-color'] = PALETTE.border; delete p['line-dasharray']; }
     else if (/^railway/.test(l.id) && l.type === 'line') p['line-color'] = '#C9B9A2';
     else if (/^highway_.*(inner|minor|subtle)$/.test(l.id) && l.type === 'line') p['line-color'] = PALETTE.road;
-    else if (l.type === 'symbol') { p['text-color'] = PALETTE.label; p['text-halo-color'] = PALETTE.halo; p['text-halo-width'] = 1.4; }
+    else if (l.type === 'symbol') {
+      // Noms en alphabet latin seulement (plus lisible que le double affichage).
+      if (kind === 'city' && l.layout && 'text-field' in l.layout) (l.layout as Record<string, unknown>)['text-field'] = ['coalesce', ['get', 'name:latin'], ['get', 'name']];
+      p['text-color'] = PALETTE.label; p['text-halo-color'] = PALETTE.halo; p['text-halo-width'] = 1.4; }
   }
   return s;
 }
