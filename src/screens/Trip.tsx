@@ -4,6 +4,7 @@ import { tripDays } from '../lib/logic';
 import { geocodeActivity } from '../lib/geo';
 import ActivitySheet from './ActivitySheet';
 import TripForm from './TripForm';
+import Search from './Search';
 import Icon from './Icon';
 import NowTab from './tabs/NowTab';
 import DaysTab from './tabs/DaysTab';
@@ -42,6 +43,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
   const [messages, setMessages] = useState<Message[]>([]);
   const [sheet, setSheet] = useState<{ a: Activity | null; day: string | null } | null>(null);
   const [editTrip, setEditTrip] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [partnerHere, setPartnerHere] = useState<Presence>(null);
   const presence = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const geoBusy = useRef(false);
@@ -128,6 +130,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
         <button className={'here' + (partnerHere ? ' on' : '')} onClick={() => go('us')} aria-label={partnerHere ? `${partnerName} est dans l'app` : `${partnerName} n'est pas connectée`}>
           <span className="avatar sm" style={{ background: 'var(--partner)' }}>{partnerName[0]?.toUpperCase()}</span>
         </button>
+        <button className="icon-btn" onClick={() => setSearching(true)} aria-label="Rechercher un lieu à ajouter"><Icon name="search" /></button>
         <button className="icon-btn" onClick={() => setEditTrip(true)} aria-label="Modifier le voyage"><Icon name="edit" /></button>
       </header>
       {partnerHere && (
@@ -154,6 +157,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
       </nav>
 
       {sheet && <ActivitySheet tripId={trip.id} days={days} day={sheet.day} activity={sheet.a} onClose={() => { setSheet(null); load(); }} />}
+      {searching && <Search islandId={island.id} tripId={trip.id} onClose={() => setSearching(false)} onAdded={() => load()} />}
       {editTrip && <TripForm islandId={island.id} trip={trip} onClose={() => setEditTrip(false)} onDeleted={onBack} />}
     </main>
   );

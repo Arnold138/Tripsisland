@@ -2,6 +2,10 @@
 
 Vos voyages à deux : un espace partagé, synchronisé en direct entre vos deux téléphones.
 
+## Nouveautés de la version 0.6 — Recherche
+- **Bouton « Rechercher »** à côté du logo (et loupe dans chaque voyage) : collez un nom vu sur TikTok ou décrivez le lieu, l'app trouve le vrai lieu (Google) et l'ajoute au voyage et au jour choisis, déjà placé sur la carte.
+- Le texte collé est nettoyé (liens, hashtags, emojis). Pendant la recherche, un petit avion traverse l'écran.
+
 ## Nouveautés de la version 0.5 — Tout le voyage en 5 onglets
 - **Barre d'onglets en bas** dans chaque voyage : **Maintenant** (compte à rebours, raccourcis, premier jour, ce qu'on a fait, photos), **Jours**, **Carte**, **Match**, **Nous**.
 - **Activités plus claires** : deux vrais boutons **Itinéraire** (bonhomme qui marche, ouvre Google Maps depuis l'étape d'avant) et **C'est fait** (l'activité part dans « Ce qu'on a fait », avec la date).

@@ -65,3 +65,10 @@ describe('photos', () => {
     expect(m.lat).toBeCloseTo(38.7139, 3); expect(m.lon).toBeCloseTo(-9.1394, 3); expect(m.taken_at).not.toBeNull();
   });
 });
+
+import { cleanQuery } from '../screens/Search';
+describe('recherche', () => {
+  it('nettoie un texte collé depuis TikTok', () => {
+    expect(cleanQuery('🎋 Forêt de bambous #kyoto #japan https://vm.tiktok.com/abc @lea')).toBe('Forêt de bambous kyoto japan lea');
+  });
+});

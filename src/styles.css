@@ -200,3 +200,22 @@ button { cursor: pointer; }
 
 .bubble.me { cursor: pointer; }
 .bubble-del { margin-top: 8px; border: 0; border-radius: 10px; min-height: 36px; padding: 0 12px; background: #FFF4F0; color: var(--alert); font-weight: 600; font-size: 13px; }
+
+/* v0.6 — recherche */
+.search-chip { border: 0; background: var(--surface); border-radius: 999px; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(14,14,14,.06); }
+.search-screen { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow-y: auto; max-width: 480px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 24px); display: flex; flex-direction: column; gap: 12px; animation: rise .25s ease-out; }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ask { background: var(--surface); border-radius: 24px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 6px 24px rgba(60,40,20,.08); }
+.ask textarea { border: 0; resize: none; font: inherit; font-size: 18px; line-height: 1.35; background: none; outline: none; color: var(--ink); }
+.ask textarea::placeholder { color: #9A988F; }
+.plane-loader { text-align: center; padding: 8px 0 4px; }
+.plane-loader p { margin: 0; font-size: 14px; color: var(--muted2); font-weight: 600; }
+.added { margin: 0; display: flex; gap: 8px; align-items: center; background: #E6F6EC; color: var(--ok-text); border-radius: 14px; padding: 10px 14px; font-weight: 600; font-size: 14px; }
+.place { background: var(--surface); border-radius: 20px; overflow: hidden; }
+.place.on { box-shadow: 0 0 0 2px var(--ink); }
+.place-main { width: 100%; border: 0; background: none; text-align: left; display: flex; align-items: center; gap: 12px; padding: 14px; }
+.place-main b { display: block; font-size: 16px; letter-spacing: -.01em; }
+.place-main small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.sm-pill { flex: none; min-height: 36px; font-size: 13px; padding: 0 12px; }
+.place-add { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+@media (prefers-reduced-motion: reduce) { .search-screen { animation: none; } }
