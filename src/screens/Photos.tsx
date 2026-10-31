@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import exifr from 'exifr';
+import { readMeta } from '../lib/photo';
 import { supabase, type Photo } from '../lib/supabase';
 
 // Réduit fortement la photo (1280 px max, JPEG 0,7 ≈ 150 à 300 Ko) pour rester dans le stockage gratuit.
@@ -38,15 +38,14 @@ export default function Photos({ tripId }: { tripId: string }) {
     for (const f of Array.from(files).slice(0, 60)) {
       setBusy(`Envoi ${++done} / ${Math.min(files.length, 60)}…`);
       try {
-        const meta = await exifr.parse(f, { gps: true, pick: ['DateTimeOriginal', 'latitude', 'longitude'] }).catch(() => null);
+        const meta = await readMeta(f);
         const blob = await compress(f);
         const path = `${tripId}/${crypto.randomUUID()}.jpg`;
         const up = await supabase.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg' });
         if (up.error) continue;
-        if (meta?.latitude != null) withGps++;
+        if (meta.lat != null) withGps++;
         await supabase.from('photos').insert({
-          trip_id: tripId, path, lat: meta?.latitude ?? null, lon: meta?.longitude ?? null,
-          taken_at: meta?.DateTimeOriginal ? new Date(meta.DateTimeOriginal).toISOString() : null
+          trip_id: tripId, path, lat: meta.lat, lon: meta.lon, taken_at: meta.taken_at
         });
       } catch { /* photo illisible : on passe à la suivante */ }
     }
@@ -65,7 +64,7 @@ export default function Photos({ tripId }: { tripId: string }) {
         + Ajouter des photos (compressées)
         <input type="file" accept="image/*" multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
       </label>
-      <p className="mono" style={{ margin: 0, textTransform: 'none' }}>{busy ?? 'Le lieu et la date de chaque photo s’affichent sur le globe, chez vous deux.'}</p>
+      <p className="mono" style={{ margin: 0, textTransform: 'none' }}>{busy ?? 'Le lieu et la date de chaque photo s’affichent sur le globe, chez vous deux. Sur iPhone : dans le choix des photos, touchez « Options » et activez « Lieu ».'}</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 4 }}>
         {photos.map((p) => (
           <button key={p.id} onClick={() => setOpen(p)} style={{ border: 0, padding: 0, aspectRatio: '1', borderRadius: 10, overflow: 'hidden', background: '#E4E2DC', position: 'relative' }} aria-label="Voir la photo">
