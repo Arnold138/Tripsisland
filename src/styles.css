@@ -71,3 +71,18 @@ button { cursor: pointer; }
 .idea .body { padding: 18px 22px; display: flex; flex-direction: column; gap: 8px; }
 .round { width: 68px; height: 68px; border-radius: 50%; border: 1.5px solid #CFCDC6; background: var(--surface); display: grid; place-items: center; }
 .round.yes { width: 78px; height: 78px; border: 0; background: var(--ink); color: var(--accent); }
+
+/* Globe v0.4 — carte réelle, style cosy */
+.globe { width: 100%; height: 340px; border-radius: 28px; overflow: hidden; background: radial-gradient(circle at 50% 45%, #FFF8EC 0%, var(--bg) 70%); }
+.globe .maplibregl-canvas { outline: none; }
+.globe .maplibregl-ctrl-attrib { font-size: 9px; background: rgba(244,243,239,.7); }
+.gpin { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: var(--sans); }
+.gpin span { order: -1; background: #fff; color: var(--ink); font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; box-shadow: 0 4px 14px rgba(60,40,20,.15); white-space: nowrap; }
+.gpin i { position: relative; width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px #fff, 0 3px 10px rgba(60,40,20,.25); }
+.gpin i::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--c); animation: gpulse 2.4s ease-out infinite; }
+@keyframes gpulse { from { transform: scale(1); opacity: .8; } to { transform: scale(3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gpin i::after { animation: none; } }
+.ghome { width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2.5px var(--ink); }
+.liked { display: flex; gap: 10px; align-items: center; background: var(--surface); border-radius: 18px; padding: 12px 12px 12px 14px; }
+.liked b { display: block; font-size: 15px; }
+.liked .m { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, type Activity, type Idea, type Swipe, type Trip as TripT } from '../lib/supabase';
 import { byTime, mapsLink, tripDays } from '../lib/logic';
 import ActivitySheet from './ActivitySheet';
@@ -67,6 +67,20 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
   const voted = new Set(swipes.filter((s) => s.user_id === me.id).map((s) => s.idea_id));
   const queue = ideas.filter((i) => !i.matched && !voted.has(i.id));
   const current = queue[0];
+  const pName = partner?.name?.split(' ')[0] ?? 'ton binôme';
+  const myYes = ideas.filter((i) => !i.matched && swipes.some((s) => s.idea_id === i.id && s.user_id === me.id && s.vote === 'yes'));
+  const partnerVote = (id: string) => swipes.find((s) => s.idea_id === id && s.user_id === partner?.id)?.vote;
+  const busyGen = useRef(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  // Ajout direct au programme, sans attendre le oui de l'autre (le match automatique reste actif).
+  const addNow = async (i: Idea) => {
+    setAdding(i.id);
+    await supabase.from('ideas').update({ matched: true }).eq('id', i.id);
+    await supabase.from('activities').insert({ trip_id: trip.id, day: i.day, title: i.title, notes: i.why, tag: i.tag, created_by: me.id });
+    setAdding(null);
+    load();
+  };
+  const dayLabel = (d: string | null) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' }) : 'À placer';
   const partnerYes = (id: string) => swipes.some((s) => s.idea_id === id && s.user_id === partner?.id && s.vote === 'yes');
 
   const vote = async (v: 'yes' | 'no') => {
@@ -77,6 +91,8 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
     load();
   };
   const generate = async () => {
+    if (busyGen.current) return; // un seul appel payant à la fois, même en tapant deux fois
+    busyGen.current = true;
     setGen('Recherche d’idées…');
     const { data, error } = await supabase.functions.invoke('ideas', { body: { trip_id: trip.id, city: city.trim() || null, day: ideaDay || null, categories: cats } });
     let msg: string | null = data?.error ?? null;
@@ -86,6 +102,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
       msg = msg ?? 'IA indisponible pour le moment, réessaie dans un instant.';
     }
     setGen(msg);
+    busyGen.current = false;
     load();
   };
   const toggleDone = async (a: Activity) => { await supabase.from('activities').update({ done: !a.done }).eq('id', a.id); };
@@ -169,7 +186,28 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
               </div>
             </>
           ) : (
-            <p className="sub" style={{ textAlign: 'center' }}>{ideas.length ? 'Tu as tout swipé. Les matchs arrivent dans « À placer ».' : 'Pas encore d’idées pour ce voyage.'}</p>
+            <p className="sub" style={{ textAlign: 'center' }}>{ideas.length ? `Tu as tout swipé. Quand ${pName} dit oui aussi, l’idée arrive toute seule dans son jour — ou touche « Ajouter » ci-dessous.` : 'Pas encore d’idées pour ce voyage.'}</p>
+          )}
+          {myYes.length > 0 && (
+            <section aria-label="Tes coups de cœur" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p className="mono" style={{ margin: '4px 0 0' }}>Tes coups de cœur · {myYes.length}</p>
+              {myYes.map((i) => {
+                const pv = partnerVote(i.id);
+                return (
+                  <div key={i.id} className="liked">
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <b>{i.title}</b>
+                      <span className="m" style={{ color: pv === 'no' ? 'var(--alert)' : pv === 'yes' ? 'var(--ok-text)' : 'var(--partner)' }}>
+                        {pv === 'no' ? `${pName} a dit non` : pv === 'yes' ? `${pName} a dit oui` : `En attente de ${pName}`} · {dayLabel(i.day)}
+                      </span>
+                    </span>
+                    <button className="btn sm" style={{ width: 'auto', padding: '0 12px', flex: 'none' }} disabled={adding === i.id} onClick={() => addNow(i)}>
+                      {adding === i.id ? '…' : 'Ajouter'}
+                    </button>
+                  </div>
+                );
+              })}
+            </section>
           )}
           <section className="card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12, padding: 16 }} aria-label="Filtres des idées">
             <p className="mono" style={{ margin: 0 }}>Quel type ? (rien = un mélange de tout)</p>
@@ -191,6 +229,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
             </div>
           </section>
           <button className="btn" onClick={generate} disabled={!!gen && gen.startsWith('Recherche')}>{gen?.startsWith('Recherche') ? gen : 'Proposer 8 idées avec ces filtres'}</button>
+          <p className="mono" style={{ margin: 0, textAlign: 'center', textTransform: 'none' }}>1 appui = 1 seule recherche (8 idées) · moins d’1 centime{queue.length ? ` · encore ${queue.length} à swiper` : ''}</p>
           {gen && !gen.startsWith('Recherche') && <p className="err" role="alert">{gen}</p>}
         </div>
       )}
@@ -207,8 +246,8 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
         <div role="dialog" aria-label="C'est un match" style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'var(--ink)', color: '#fff', padding: '120px 28px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p className="mono" style={{ color: 'var(--accent)' }}>Vous avez dit oui tous les deux</p>
           <h2 style={{ margin: 0, fontSize: 52, lineHeight: .95, letterSpacing: '-.04em' }}>C’est un match.</h2>
-          <p style={{ color: '#D6D4CD', fontSize: 17 }}>{match.title} est ajouté dans « À placer ».</p>
-          <button className="btn" style={{ marginTop: 'auto', background: '#fff', color: 'var(--ink)' }} onClick={() => { setMatch(null); setTab('plan'); setDay(null); }}>Voir et placer</button>
+          <p style={{ color: '#D6D4CD', fontSize: 17 }}>{match.title} est ajouté {match.day ? 'au ' + dayLabel(match.day) : 'dans « À placer »'}.</p>
+          <button className="btn" style={{ marginTop: 'auto', background: '#fff', color: 'var(--ink)' }} onClick={() => { setMatch(null); setTab('plan'); setDay(match.day ?? null); }}>Voir dans le programme</button>
           <button className="btn ghost" style={{ background: 'transparent', color: '#fff', borderColor: '#4A4945' }} onClick={() => setMatch(null)}>Continuer à swiper</button>
         </div>
       )}
