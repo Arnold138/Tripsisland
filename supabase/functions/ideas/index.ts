@@ -43,13 +43,13 @@ Leurs goûts : ${tastes.join(', ') || 'non précisés'}. Goûts communs priorita
 Déjà proposé (à ne pas répéter) : ${(existing ?? []).map((e) => e.title).join(' ; ') || 'rien'}.
 ${cats.length ? `Types d'activités demandés UNIQUEMENT : ${cats.join(', ')}.` : 'Mélange obligatoirement les types : restaurants, street food, balades, randonnée, culture, sorties, shopping, bars…'}
 ${city ? `Lieu imposé : ${city} et ses environs proches.` : ''}${day ? ` Pour la journée du ${day} (tiens compte du jour de la semaine et des fermetures habituelles).` : ''}
-Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUEMENT par un tableau JSON, sans texte autour :
-[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"RESTAURANT|STREET FOOD|RANDONNÉE|BALADE|SORTIE|BAR|SHOPPING|CULTURE|ONSEN|NATURE|ATELIER","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu + ville, pour une recherche Google Maps","station":"gare ou station de métro la plus proche (nom exact, ex. Shinjuku-gyoemmae)"}]`;
+Propose 8 activités réelles avec le NOM PROPRE exact d'un lieu qui existe (pas de lieu générique inventé), variées, adaptées à la saison. Réponds UNIQUEMENT par un tableau JSON, sans texte autour :
+[{"title":"…","city":"quartier, ville (ex. Shinjuku, Tokyo)","why":"une phrase qui relie l'activité à leurs goûts","tag":"RESTAURANT|STREET FOOD|RANDONNÉE|BALADE|SORTIE|BAR|SHOPPING|CULTURE|ONSEN|NATURE|ATELIER","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu + ville, pour une recherche Google Maps","station":"gare ou station de métro la plus proche (nom exact, ex. Shinjuku-gyoemmae)"}]`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 3000, thinking: { type: 'disabled' }, messages: [{ role: 'user', content: prompt }] })
   });
   if (!r.ok) {
     const detail = await r.text();

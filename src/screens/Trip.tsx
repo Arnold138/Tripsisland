@@ -153,7 +153,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
         ))}
       </nav>
 
-      {sheet && <ActivitySheet tripId={trip.id} days={days} day={sheet.day} activity={sheet.a} onClose={() => setSheet(null)} />}
+      {sheet && <ActivitySheet tripId={trip.id} days={days} day={sheet.day} activity={sheet.a} onClose={() => { setSheet(null); load(); }} />}
       {editTrip && <TripForm islandId={island.id} trip={trip} onClose={() => setEditTrip(false)} onDeleted={onBack} />}
     </main>
   );
