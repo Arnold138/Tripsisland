@@ -51,6 +51,11 @@ export default function NowTab({ d }: { d: TripData }) {
         </div>
       )}
 
+      {!past && acts.some((a) => !a.day) && (
+        <button className="todo-bar" onClick={() => d.go('days', null)}>
+          <b>{acts.filter((a) => !a.day).length}</b> lieu{acts.filter((a) => !a.day).length > 1 ? 'x' : ''} à placer dans un jour <span>Organiser ›</span>
+        </button>
+      )}
       {!past && (
         <div className="shortcuts">
           <button onClick={() => d.edit('new', firstEmpty ?? focusDay ?? null)}><Icon name="plus" /><b>Ajouter</b><span>{firstEmpty ? `Jour ${days.indexOf(firstEmpty) + 1} est vide` : 'une activité'}</span></button>

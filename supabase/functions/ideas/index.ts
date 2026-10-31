@@ -8,9 +8,12 @@ const cors = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 const TASTE: Record<string, string> = {
-  marche: 'marche et randonnée', street: 'street food', gastro: 'gastronomie', temples: 'temples', onsen: 'onsen',
-  nuit: 'vie nocturne', shopping: 'shopping', musees: 'musées', anime: 'anime et jeux vidéo', photo: 'photo',
-  ateliers: 'ateliers (cuisine, artisanat)', nature: 'nature'
+  street: 'street food', gastro: 'gastronomie', ramen: 'ramen et sushi', izakaya: 'izakaya et saké', cafe: 'cafés et matcha', sucre: 'pâtisseries', marches: 'marchés',
+  temples: 'temples et sanctuaires', ghibli: 'Studio Ghibli', anime: 'anime et manga', jeux: 'jeux vidéo et arcades', samourai: 'châteaux et samouraïs',
+  tradition: 'Japon traditionnel (geishas, cérémonie du thé)', festivals: 'festivals et matsuri', kawaii: 'kawaii et insolite',
+  marche: 'marche et randonnée', nature: 'nature', jardins: 'jardins zen', onsen: 'onsen', montagne: 'montagne et neige', mer: 'mer et îles', fleurs: 'fleurs (pruniers, sakura)',
+  nuit: 'vie nocturne', karaoke: 'karaoké', bars: 'bars à cocktails', shopping: 'shopping', vintage: 'friperies et vintage', design: 'design et papeterie', quartiers: 'quartiers à flâner',
+  musees: 'musées', artdigital: 'art numérique (teamLab)', archi: 'architecture', photo: 'photo et points de vue', ateliers: 'ateliers (cuisine, artisanat)', histoire: 'histoire'
 };
 
 Deno.serve(async (req) => {
@@ -35,11 +38,14 @@ Deno.serve(async (req) => {
   const cats = (Array.isArray(body.categories) ? body.categories : []).filter((c) => typeof c === 'string').slice(0, 10).map((c) => c.slice(0, 30));
   const city = typeof body.city === 'string' ? body.city.trim().slice(0, 60) : '';
   const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
-  const all = (profs ?? []).flatMap((p) => p.tastes ?? []);
+  const raw = (profs ?? []).flatMap((p) => p.tastes ?? []);
+  const crowdPref = raw.includes('foule-evite') ? 'Ils évitent la foule : privilégie les lieux moins connus et indique les heures calmes.' : raw.includes('foule-ambiance') ? 'Ils aiment les lieux animés et vivants.' : '';
+  const all = raw.filter((t) => !t.startsWith('foule-'));
   const common = all.filter((t, i) => all.indexOf(t) !== i);
   const tastes = [...new Set(all)].map((t) => TASTE[t] ?? t);
   const prompt = `Tu aides un couple à préparer son voyage "${trip.title}" (${trip.start_date} → ${trip.end_date}).
 Leurs goûts : ${tastes.join(', ') || 'non précisés'}. Goûts communs prioritaires : ${[...new Set(common)].map((t) => TASTE[t] ?? t).join(', ') || 'aucun'}.
+${crowdPref}
 Déjà proposé (à ne pas répéter) : ${(existing ?? []).map((e) => e.title).join(' ; ') || 'rien'}.
 ${cats.length ? `Types d'activités demandés UNIQUEMENT : ${cats.join(', ')}.` : 'Mélange obligatoirement les types : restaurants, street food, balades, randonnée, culture, sorties, shopping, bars…'}
 ${city ? `Lieu imposé : ${city} et ses environs proches.` : ''}${day ? ` Pour la journée du ${day} (tiens compte du jour de la semaine et des fermetures habituelles).` : ''}

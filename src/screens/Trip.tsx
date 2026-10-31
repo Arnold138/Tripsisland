@@ -27,12 +27,13 @@ export const TAB_LABEL: Record<Tab, string> = { now: 'Maintenant', days: 'Jours'
 export const longDay = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 export const shortDay = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }).replace('.', '');
 
-export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: TripT; onBack: () => void }) {
+export default function Trip({ ctx, trip: initial, onBack, initialTab, initialDay }: { ctx: Ctx; trip: TripT; onBack: () => void; initialTab?: Tab; initialDay?: string | null }) {
   const { me, partner, island } = ctx;
   const [trip, setTrip] = useState(initial);
-  const [tab, setTab] = useState<Tab>('now');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'now');
   const days = useMemo(() => tripDays(trip.start_date, trip.end_date), [trip.start_date, trip.end_date]);
   const [day, setDay] = useState<string | null>(() => {
+    if (initialDay !== undefined) return initialDay;
     const today = new Date().toISOString().slice(0, 10);
     const all = tripDays(initial.start_date, initial.end_date);
     return all.includes(today) ? today : all[0] ?? null;
@@ -157,7 +158,7 @@ export default function Trip({ ctx, trip: initial, onBack }: { ctx: Ctx; trip: T
       </nav>
 
       {sheet && <ActivitySheet tripId={trip.id} days={days} day={sheet.day} activity={sheet.a} onClose={() => { setSheet(null); load(); }} />}
-      {searching && <Search islandId={island.id} tripId={trip.id} onClose={() => setSearching(false)} onAdded={() => load()} />}
+      {searching && <Search islandId={island.id} tripId={trip.id} onClose={() => { setSearching(false); load(); }} onShow={(_id, d) => { setSearching(false); load(); go('days', d); }} />}
       {editTrip && <TripForm islandId={island.id} trip={trip} onClose={() => setEditTrip(false)} onDeleted={onBack} />}
     </main>
   );

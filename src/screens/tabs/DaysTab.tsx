@@ -1,4 +1,6 @@
-import type { Activity } from '../../lib/supabase';
+import { useState } from 'react';
+import { supabase, type Activity } from '../../lib/supabase';
+import { CrowdBadge, CrowdSheet, fetchCrowd, type CrowdInfo } from '../Crowd';
 import { byTime, dirLink, estimateLeg, fmtKm, fmtMin, type Leg } from '../../lib/logic';
 import Icon from '../Icon';
 import { longDay, type TripData } from '../Trip';
@@ -13,6 +15,17 @@ const has = (a: Activity): a is Activity & { lat: number; lon: number } => a.lat
 /** Une activité : on voit tout de suite quoi faire (Itinéraire, C'est fait), et on la touche pour la modifier. */
 export function ActivityCard({ a, d, from }: { a: Activity; d: TripData; from?: Activity | null }) {
   const mine = a.created_by === d.ctx.me.id;
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const crowd = (a as Activity & { crowd?: CrowdInfo | null }).crowd ?? null;
+  const estimate = async () => {
+    setBusy(true); setErr(null);
+    const r = await fetchCrowd({ name: a.title, address: a.address, date: a.day, activityId: a.id });
+    setBusy(false);
+    if (r.error) setErr(r.error); else { setOpen(true); d.reload(); }
+  };
+  const place = async (day: string) => { await supabase.from('activities').update({ day }).eq('id', a.id); d.reload(); };
   return (
     <article className={'act2' + (a.done ? ' done' : '')}>
       <button className="act2-main" onClick={() => d.edit(a)} aria-label={`Modifier ${a.title}`}>
@@ -27,6 +40,16 @@ export function ActivityCard({ a, d, from }: { a: Activity; d: TripData; from?: 
           <span className="where"><Icon name={a.station ? 'metro' : 'pin'} size={15} />{a.station ? `Station la plus proche : ${a.station}` : shortAddr(a.address!)}</span>
         )}
       </button>
+      <div className="act2-meta">
+        <CrowdBadge crowd={crowd} busy={busy} onClick={() => (crowd ? setOpen(true) : estimate())} />
+        {err && <span className="err" style={{ margin: 0, fontSize: 12 }}>{err}</span>}
+      </div>
+      {!a.day && d.days.length > 0 && (
+        <div className="place-days" role="group" aria-label={`Placer ${a.title} dans un jour`}>
+          <span className="mono" style={{ flex: 'none' }}>Placer :</span>
+          {d.days.map((x) => <button key={x} onClick={() => place(x)}>{new Date(x + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }).replace('.', '')}</button>)}
+        </div>
+      )}
       <div className="act2-actions">
         <a className="pill" href={dirLink(a, from && has(from) ? from : null)} target="_blank" rel="noopener">
           <Icon name="walk" size={18} /> Itinéraire
@@ -35,6 +58,7 @@ export function ActivityCard({ a, d, from }: { a: Activity; d: TripData; from?: 
           <Icon name={a.done ? 'check' : 'check'} size={18} /> {a.done ? 'Fait' : 'C’est fait'}
         </button>
       </div>
+      {open && crowd && <CrowdSheet title={a.title} crowd={crowd} busy={busy} onClose={() => setOpen(false)} onRefresh={estimate} />}
     </article>
   );
 }
@@ -66,21 +90,27 @@ export default function DaysTab({ d, day, setDay }: { d: TripData; day: string |
   return (
     <section className="tab-body" aria-label="Programme jour par jour">
       <div className="days" role="group" aria-label="Jours">
+        <button className={'day todo' + (unplaced.length ? ' has' : '')} aria-pressed={day === null} onClick={() => setDay(null)} style={{ minWidth: 76 }} aria-label={`À placer : ${unplaced.length} activités sans jour`}>
+          <small>À PLACER</small><b>{unplaced.length}</b><span className="pips" />
+        </button>
         {days.map((x, i) => (
           <button key={x} className="day" aria-pressed={day === x} onClick={() => setDay(x)} aria-label={`Jour ${i + 1}, ${longDay(x)}, ${count(x)} activités`}>
             <small>{short(x)}</small><b>{num(x)}</b>
             <span className="pips">{Array.from({ length: Math.min(3, count(x)) }).map((_, k) => <i key={k} />)}</span>
           </button>
         ))}
-        <button className="day" aria-pressed={day === null} onClick={() => setDay(null)} style={{ minWidth: 76 }}>
-          <small>À PLACER</small><b>{unplaced.length}</b><span className="pips" />
-        </button>
       </div>
+      {day !== null && unplaced.length > 0 && (
+        <button className="todo-bar" onClick={() => setDay(null)}>
+          <b>{unplaced.length}</b> lieu{unplaced.length > 1 ? 'x' : ''} à placer dans un jour <span>Organiser ›</span>
+        </button>
+      )}
 
       <div className="day-head">
         <div>
           <p className="mono" style={{ margin: 0 }}>{day ? `Jour ${idx + 1} sur ${days.length}` : 'Pas encore de jour'}</p>
           <h2>{day ? longDay(day) : 'À placer'}</h2>
+          {!day && <p className="sub" style={{ margin: '2px 0 0', fontSize: 14 }}>Touchez un jour sous chaque lieu pour le planifier.</p>}
         </div>
         {day && <div className="row" style={{ gap: 6 }}>
           <button className="icon-btn" disabled={idx <= 0} onClick={() => setDay(days[idx - 1])} aria-label="Jour précédent"><Icon name="back" /></button>

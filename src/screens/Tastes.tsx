@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { TASTES, commonTastes } from '../lib/logic';
+import { CROWD_PREFS, TASTE_GROUPS, commonTastes } from '../lib/logic';
 import type { Ctx } from '../App';
 
 const PACES: [string, string][] = [['calme', 'Tranquille'], ['eq', 'Équilibré'], ['intense', 'Intense']];
@@ -22,6 +22,8 @@ export default function Tastes({ ctx, onDone }: { ctx: Ctx; onDone: () => void }
     setMine(tastes);
     await supabase.from('profiles').update({ tastes, pace: p, updated_at: new Date().toISOString() }).eq('id', me.id);
   };
+  const crowd = CROWD_PREFS.find(([id]) => mine.includes(id))?.[0] ?? 'foule-ok';
+  const setCrowd = (id: string) => save([...mine.filter((t) => !t.startsWith('foule-')), id]);
   const toggle = (id: string) => { if (who !== 'me') return; save(mine.includes(id) ? mine.filter((t) => t !== id) : [...mine, id]); };
   const setP = (p: typeof pace) => { setPace(p); save(mine, p); };
 
@@ -40,18 +42,31 @@ export default function Tastes({ ctx, onDone }: { ctx: Ctx; onDone: () => void }
         </button>
       </div>
 
-      <div className="chips" style={{ marginTop: 16 }}>
-        {TASTES.map(([id, label]) => (
-          <button key={id} className="chip" aria-pressed={shown.includes(id)} disabled={who !== 'me'}
-            style={{ ['--c' as string]: color, opacity: 1 }} onClick={() => toggle(id)}>
-            {label}{shown.includes(id) && other.includes(id) && <span className="both" aria-label="en commun" />}
-          </button>
-        ))}
-      </div>
+      {TASTE_GROUPS.map((g) => (
+        <section key={g.title} aria-label={g.title}>
+          <p className="mono" style={{ margin: '18px 0 8px' }}>{g.title}</p>
+          <div className="chips">
+            {g.items.map(([id, label]) => (
+              <button key={id} className="chip" aria-pressed={shown.includes(id)} disabled={who !== 'me'}
+                style={{ ['--c' as string]: color, opacity: 1 }} onClick={() => toggle(id)}>
+                {label}{shown.includes(id) && other.includes(id) && <span className="both" aria-label="en commun" />}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
       <p className="sub" style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}>
         <span className="dot" style={{ width: 6, height: 6, background: 'var(--accent)' }} />
         {common} goût{common > 1 ? 's' : ''} en commun{who === 'partner' ? ' · ses choix se mettent à jour en direct' : ''}
       </p>
+
+      <p className="mono" style={{ margin: '20px 0 8px' }}>La foule</p>
+      <div className="seg">
+        {CROWD_PREFS.map(([id, label]) => (
+          <button key={id} aria-pressed={crowd === id} disabled={who !== 'me'} style={{ ['--c' as string]: 'var(--ink)', justifyContent: 'center', padding: '0 8px', fontSize: 14 }}
+            onClick={() => setCrowd(id)}>{label}</button>
+        ))}
+      </div>
 
       <p className="mono" style={{ margin: '20px 0 8px' }}>Rythme</p>
       <div className="seg">
@@ -62,7 +77,7 @@ export default function Tastes({ ctx, onDone }: { ctx: Ctx; onDone: () => void }
       </div>
 
       <div className="spacer" style={{ paddingTop: 20 }}>
-        <button className="btn" disabled={mine.length === 0} onClick={onDone}>Continuer</button>
+        <button className="btn" disabled={mine.filter((t) => !t.startsWith('foule-')).length === 0} onClick={onDone}>Continuer</button>
       </div>
     </main>
   );

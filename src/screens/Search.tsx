@@ -3,8 +3,9 @@ import { supabase, type Place, type Trip } from '../lib/supabase';
 import { tripDays } from '../lib/logic';
 import { shortAddr } from './tabs/DaysTab';
 import Icon from './Icon';
+import { CrowdBadge, CrowdSheet, fetchCrowd, type CrowdInfo } from './Crowd';
 
-type Props = { islandId: string; tripId?: string | null; onClose: () => void; onAdded?: (tripId: string, day: string | null) => void };
+type Props = { islandId: string; tripId?: string | null; onClose: () => void; onShow: (tripId: string, day: string | null) => void };
 
 /** Nettoie un texte collé (TikTok, Instagram…) : liens, hashtags, emojis, mentions. */
 export function cleanQuery(raw: string): string {
@@ -39,7 +40,7 @@ function Plane() {
   );
 }
 
-export default function Search({ islandId, tripId, onClose, onAdded }: Props) {
+export default function Search({ islandId, tripId, onClose, onShow }: Props) {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -48,7 +49,10 @@ export default function Search({ islandId, tripId, onClose, onAdded }: Props) {
   const [pick, setPick] = useState<Place | null>(null);
   const [tId, setTId] = useState<string>(tripId ?? '');
   const [day, setDay] = useState('');
-  const [added, setAdded] = useState<string | null>(null);
+  const [added, setAdded] = useState<{ text: string; tripId: string; day: string | null } | null>(null);
+  const [crowd, setCrowd] = useState<Record<string, CrowdInfo>>({});
+  const [crowdBusy, setCrowdBusy] = useState<string | null>(null);
+  const [crowdOpen, setCrowdOpen] = useState<Place | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const last = useRef('');
 
@@ -82,14 +86,17 @@ export default function Search({ islandId, tripId, onClose, onAdded }: Props) {
   const days = trip ? tripDays(trip.start_date, trip.end_date) : [];
   const add = async () => {
     if (!pick || !trip) return;
-    const { error } = await supabase.from('activities').insert({
+    const known = crowd[pick.id] ?? null;
+    const { data: row, error } = await supabase.from('activities').insert({
       trip_id: trip.id, day: day || null, title: pick.name, address: pick.address, place_id: pick.id,
-      lat: pick.lat, lon: pick.lon, geo_tried: true, query: pick.name
-    });
+      lat: pick.lat, lon: pick.lon, geo_tried: true, query: pick.name, crowd: known, crowd_at: known ? new Date().toISOString() : null
+    }).select('id').single();
     if (error) { setErr(error.message); return; }
-    setAdded(`${pick.name} ajouté à ${trip.title}${day ? ', ' + new Date(day + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' }) : ' (à placer)'}`);
+    const p = pick;
+    setAdded({ text: `${p.name} ajouté à ${trip.title} · ${day ? new Date(day + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' }) : 'à placer'}`, tripId: trip.id, day: day || null });
     setPick(null);
-    onAdded?.(trip.id, day || null);
+    // L'affluence est estimée tout de suite pour ce jour-là (1 petit appel IA), si pas déjà fait.
+    if (!known && row?.id) fetchCrowd({ name: p.name, address: p.address, date: day || null, activityId: row.id });
   };
 
   return (
@@ -116,7 +123,12 @@ export default function Search({ islandId, tripId, onClose, onAdded }: Props) {
       )}
       {busy && <Plane />}
       {err && <p className="err" role="alert">{err}</p>}
-      {added && <p className="added" role="status"><Icon name="check" size={18} /> {added}</p>}
+      {added && (
+        <div className="added" role="status">
+          <Icon name="check" size={18} /><span style={{ flex: 1 }}>{added.text}</span>
+          <button onClick={() => onShow(added.tripId, added.day)}>Voir dans Jours ›</button>
+        </div>
+      )}
 
       {results && results.length === 0 && <div className="empty"><p>Rien trouvé. Ajoute la ville, par exemple « … Kyoto ».</p></div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -132,26 +144,39 @@ export default function Search({ islandId, tripId, onClose, onAdded }: Props) {
             </button>
             {pick?.id === p.id && (
               <div className="place-add">
-                <div className="row">
-                  <div className="field" style={{ flex: 1, minWidth: 0 }}><label htmlFor="st">Voyage</label>
-                    <select id="st" className="input" value={tId} onChange={(e) => { setTId(e.target.value); setDay(''); }}>
+                <div className="row" style={{ alignItems: 'center' }}>
+                  <CrowdBadge crowd={crowd[p.id]} busy={crowdBusy === p.id} onClick={async () => {
+                    if (crowd[p.id]) { setCrowdOpen(p); return; }
+                    setCrowdBusy(p.id);
+                    const r = await fetchCrowd({ name: p.name, address: p.address, date: day || null });
+                    setCrowdBusy(null);
+                    if (r.crowd) { setCrowd((c) => ({ ...c, [p.id]: r.crowd! })); setCrowdOpen(p); } else setErr(r.error ?? null);
+                  }} />
+                  {trips.length > 1 && (
+                    <select aria-label="Voyage" className="input" style={{ minHeight: 40, flex: 1, minWidth: 0 }} value={tId} onChange={(e) => { setTId(e.target.value); setDay(''); }}>
                       {trips.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-                    </select></div>
-                  <div className="field" style={{ flex: 1, minWidth: 0 }}><label htmlFor="sd">Jour</label>
-                    <select id="sd" className="input" value={day} onChange={(e) => setDay(e.target.value)}>
-                      <option value="">À placer</option>
-                      {days.map((x, i) => <option key={x} value={x}>J{i + 1} · {new Date(x + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</option>)}
-                    </select></div>
+                    </select>
+                  )}
+                </div>
+                <p className="mono" style={{ margin: 0 }}>Quel jour ?</p>
+                <div className="day-picker" role="group" aria-label="Jour">
+                  <button className="tbd" aria-pressed={day === ''} onClick={() => setDay('')}><small>PAS SÛR</small>À définir</button>
+                  {days.map((x) => (
+                    <button key={x} aria-pressed={day === x} onClick={() => setDay(x)}>
+                      <small>{new Date(x + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '').toUpperCase()}</small>{new Date(x + 'T12:00:00').getDate()}
+                    </button>
+                  ))}
                 </div>
                 <div className="row">
                   <a className="pill" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${p.id}`} target="_blank" rel="noopener"><Icon name="pin" size={18} /> Voir</a>
-                  <button className="pill dark" onClick={add} disabled={!trip}><Icon name="plus" size={18} /> Ajouter au voyage</button>
+                  <button className="pill dark" onClick={add} disabled={!trip}><Icon name="plus" size={18} /> {day ? 'Ajouter ce jour-là' : 'Ajouter (à définir)'}</button>
                 </div>
               </div>
             )}
           </article>
         ))}
       </div>
+      {crowdOpen && crowd[crowdOpen.id] && <CrowdSheet title={crowdOpen.name} crowd={crowd[crowdOpen.id]} onClose={() => setCrowdOpen(null)} />}
       <p className="mono" style={{ textAlign: 'center', textTransform: 'none', margin: '8px 0 0' }}>1 recherche = 1 appel Google (gratuit dans le quota mensuel)</p>
     </div>
   );

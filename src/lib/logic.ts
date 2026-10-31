@@ -1,8 +1,13 @@
-export const TASTES: [string, string][] = [
-  ['marche', 'Marche & rando'], ['street', 'Street food'], ['gastro', 'Gastronomie'], ['temples', 'Temples'],
-  ['onsen', 'Onsen'], ['nuit', 'Vie nocturne'], ['shopping', 'Shopping'], ['musees', 'Musées'],
-  ['anime', 'Anime & jeux'], ['photo', 'Photo'], ['ateliers', 'Ateliers'], ['nature', 'Nature']
+export const TASTE_GROUPS: { title: string; items: [string, string][] }[] = [
+  { title: 'Manger & boire', items: [['street', 'Street food'], ['gastro', 'Gastronomie'], ['ramen', 'Ramen & sushi'], ['izakaya', 'Izakaya & saké'], ['cafe', 'Cafés & matcha'], ['sucre', 'Pâtisseries & douceurs'], ['marches', 'Marchés']] },
+  { title: 'Culture japonaise', items: [['temples', 'Temples & sanctuaires'], ['ghibli', 'Studio Ghibli'], ['anime', 'Anime & manga'], ['jeux', 'Jeux vidéo & arcades'], ['samourai', 'Châteaux & samouraïs'], ['tradition', 'Japon traditionnel (geishas, thé)'], ['festivals', 'Festivals & matsuri'], ['kawaii', 'Kawaii & insolite']] },
+  { title: 'Nature & bien-être', items: [['marche', 'Marche & rando'], ['nature', 'Nature'], ['jardins', 'Jardins zen'], ['onsen', 'Onsen'], ['montagne', 'Montagne & neige'], ['mer', 'Mer & îles'], ['fleurs', 'Fleurs (prunier, sakura)']] },
+  { title: 'Sorties & ville', items: [['nuit', 'Vie nocturne'], ['karaoke', 'Karaoké'], ['bars', 'Bars à cocktails'], ['shopping', 'Shopping'], ['vintage', 'Friperies & vintage'], ['design', 'Design & papeterie'], ['quartiers', 'Quartiers à flâner']] },
+  { title: 'Art & découverte', items: [['musees', 'Musées'], ['artdigital', 'Art numérique (teamLab)'], ['archi', 'Architecture'], ['photo', 'Photo & points de vue'], ['ateliers', 'Ateliers (cuisine, artisanat)'], ['histoire', 'Histoire']] }
 ];
+export const TASTES: [string, string][] = TASTE_GROUPS.flatMap((g) => g.items);
+/** Préférence de foule (une seule à la fois, rangée avec les goûts). */
+export const CROWD_PREFS: [string, string][] = [['foule-evite', 'On évite la foule'], ['foule-ok', 'Peu importe'], ['foule-ambiance', 'On aime l’ambiance']];
 
 const CODE_RE = /ISLA-[A-Z0-9]{4}/;
 const PENDING = 'tripisland:invite';

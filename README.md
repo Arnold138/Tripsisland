@@ -2,6 +2,12 @@
 
 Vos voyages à deux : un espace partagé, synchronisé en direct entre vos deux téléphones.
 
+## Nouveautés de la version 0.7 — À placer, affluence, goûts
+- **Ajout depuis la recherche** : on choisit le jour en un geste (ou « À définir »), puis « Voir dans Jours » ouvre directement le bon endroit.
+- **« À placer »** est désormais en premier dans les jours, en couleur, avec un rappel « N lieux à placer » ; sous chaque lieu sans jour, une rangée de jours pour le planifier d'un geste.
+- **Affluence estimée** sur chaque activité et dans la recherche : niveau (calme → bondé), courbe heure par heure, meilleur moment et à éviter, selon le jour prévu. Estimation par l'IA (≈ 0,1 centime), pas une mesure en direct.
+- **Goûts** : plus de 35 thèmes rangés par famille (Ghibli, anime, izakaya, jardins zen, teamLab, karaoké, friperies…) et une préférence **foule** (on l'évite, peu importe, on aime l'ambiance), prise en compte par les idées.
+
 ## Nouveautés de la version 0.6 — Recherche
 - **Bouton « Rechercher »** à côté du logo (et loupe dans chaque voyage) : collez un nom vu sur TikTok ou décrivez le lieu, l'app trouve le vrai lieu (Google) et l'ajoute au voyage et au jour choisis, déjà placé sur la carte.
 - Le texte collé est nettoyé (liens, hashtags, emojis). Pendant la recherche, un petit avion traverse l'écran.
