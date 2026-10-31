@@ -41,6 +41,9 @@ export default function TripForm({ islandId, trip, past: pastDefault, onClose, o
   const remove = async () => {
     if (!trip) return;
     if (!sure) { setSure(true); return; } // deuxième appui pour confirmer, sans fenêtre système
+    // Supprime aussi les fichiers photo du stockage (sinon ils resteraient sans voyage).
+    const { data: ph } = await supabase.from('photos').select('path').eq('trip_id', trip.id);
+    if (ph?.length) await supabase.storage.from('photos').remove(ph.map((p) => p.path));
     const { error } = await supabase.from('trips').delete().eq('id', trip.id);
     if (error) setErr(error.message); else { onClose(); onDeleted?.(); }
   };
