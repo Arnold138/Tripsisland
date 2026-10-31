@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import exifr from 'exifr';
 import { supabase, type Photo } from '../lib/supabase';
 
-// Réduit la photo (~1600 px, JPEG) pour rester dans le stockage gratuit.
+// Réduit fortement la photo (1280 px max, JPEG 0,7 ≈ 150 à 300 Ko) pour rester dans le stockage gratuit.
 async function compress(file: File): Promise<Blob> {
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
   c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
-  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('compression'))), 'image/jpeg', 0.8));
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('compression'))), 'image/jpeg', 0.7));
 }
 
 export default function Photos({ tripId }: { tripId: string }) {
@@ -62,7 +62,7 @@ export default function Photos({ tripId }: { tripId: string }) {
   return (
     <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <label className="btn" style={{ cursor: 'pointer' }}>
-        + Ajouter des photos
+        + Ajouter des photos (compressées)
         <input type="file" accept="image/*" multiple hidden onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
       </label>
       <p className="mono" style={{ margin: 0, textTransform: 'none' }}>{busy ?? 'Le lieu et la date de chaque photo s’affichent sur le globe, chez vous deux.'}</p>

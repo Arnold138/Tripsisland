@@ -2,6 +2,15 @@
 
 Vos voyages à deux : un espace partagé, synchronisé en direct entre vos deux téléphones.
 
+## Nouveautés de la version 0.5 — Tout le voyage en 5 onglets
+- **Barre d'onglets en bas** dans chaque voyage : **Maintenant** (compte à rebours, raccourcis, premier jour, ce qu'on a fait, photos), **Jours**, **Carte**, **Match**, **Nous**.
+- **Activités plus claires** : deux vrais boutons **Itinéraire** (bonhomme qui marche, ouvre Google Maps depuis l'étape d'avant) et **C'est fait** (l'activité part dans « Ce qu'on a fait », avec la date).
+- **Temps de trajet estimés** entre deux activités (à pied, métro/train ou train rapide, distance), total du jour et **station de départ conseillée**.
+- **Carte du voyage** : lieux numérotés dans l'ordre du jour, trajet en pointillés, un jour ou tout le voyage. Les lieux sont placés automatiquement (une seule recherche par lieu).
+- **Nous** : discussion à deux, et tout ce que chacun fait (ajouts, coups de cœur, activités faites). On voit en direct si l'autre est dans l'app et sur quel onglet, avec « Rejoindre ».
+- **Idées** : le lieu (ville, quartier) bien visible en blanc, station de départ conseillée.
+- **Ancien voyage** en un bouton sur l'accueil, puis ajout direct des photos (plus compressées : environ 200 Ko chacune).
+
 ## Nouveautés de la version 0.4 — Globe cosy et coups de cœur
 - **Nouveau globe** : une vraie carte du monde en 3D, aux couleurs douces (terre crème, mer sauge). On le tourne et on zoome au doigt ; toucher l'étiquette d'un voyage l'ouvre. Carte gratuite, sans clé.
 - **Tes coups de cœur** : dans Idées, la liste de tes ♥ avec l'état de l'autre (en attente, oui, non) et un bouton **Ajouter** pour mettre l'idée tout de suite dans son jour.

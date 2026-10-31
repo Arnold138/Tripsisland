@@ -18,12 +18,14 @@ export type Trip = {
 export type Activity = {
   id: string; trip_id: string; day: string | null; time: string | null; title: string; place_id: string | null;
   address: string | null; lat: number | null; lon: number | null; notes: string | null; tag: string | null; done: boolean;
-  created_by: string | null;
+  created_by: string | null; station: string | null; query: string | null; geo_tried: boolean;
+  done_at: string | null; created_at: string; updated_at: string | null;
 };
+export type Message = { id: string; trip_id: string; user_id: string; body: string; created_at: string };
 export type Idea = {
   id: string; trip_id: string; title: string; city: string | null; why: string | null; tag: string | null;
-  price: string | null; duration: string | null; query: string | null; matched: boolean; day: string | null;
+  price: string | null; duration: string | null; query: string | null; matched: boolean; day: string | null; station: string | null;
 };
 export type Place = { id: string; name: string; address: string; lat: number | null; lon: number | null; status: string | null; type: string | null };
-export type Swipe = { idea_id: string; user_id: string; vote: 'yes' | 'no' };
+export type Swipe = { idea_id: string; user_id: string; vote: 'yes' | 'no'; created_at?: string };
 export type Photo = { id: string; trip_id: string; path: string; lat: number | null; lon: number | null; taken_at: string | null; created_by: string | null };

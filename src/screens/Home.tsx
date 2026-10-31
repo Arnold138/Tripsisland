@@ -11,7 +11,7 @@ const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateStri
 export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: () => void; onOpen: (t: Trip) => void }) {
   const { island, me, partner } = ctx;
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<null | 'new' | 'past'>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [photoPts, setPhotoPts] = useState<{ lat: number; lon: number }[]>([]);
 
@@ -90,14 +90,17 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
         {upcoming.map(card)}
         {past.length > 0 && <p className="mono" style={{ margin: '12px 0 0' }}>Souvenirs</p>}
         {past.map(card)}
-        <button className="btn ghost" style={{ borderStyle: 'dashed' }} onClick={() => setAdding(true)}>+ Ajouter un voyage</button>
+        <div className="row">
+          <button className="btn ghost" style={{ borderStyle: 'dashed' }} onClick={() => setAdding('new')}>+ Nouveau voyage</button>
+          <button className="btn ghost" style={{ borderStyle: 'dashed' }} onClick={() => setAdding('past')}>+ Ancien voyage</button>
+        </div>
       </div>
 
       <div className="spacer" style={{ paddingTop: 20 }}>
         <button className="btn ghost sm" onClick={onTastes}>Nos goûts</button>
         <p className="mono" style={{ textAlign: 'center', margin: '12px 0 0' }}>Version {__APP_VERSION__}</p>
       </div>
-      {adding && <TripForm islandId={island.id} onClose={() => setAdding(false)} />}
+      {adding && <TripForm islandId={island.id} past={adding === 'past'} onClose={() => setAdding(null)} onCreated={(t) => { if (t.status === 'past') onOpen(t); }} />}
     </main>
   );
 }

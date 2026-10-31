@@ -56,3 +56,34 @@ export function byTime<T extends { time: string | null }>(list: T[]): T[] {
 export const mapsLink = (q: { title: string; address?: string | null; place_id?: string | null }) =>
   'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q.address ? `${q.title} ${q.address}` : q.title) +
   (q.place_id ? '&query_place_id=' + encodeURIComponent(q.place_id) : '');
+
+/** Distance à vol d'oiseau en km. */
+export function km(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const R = Math.PI / 180, dLat = (b.lat - a.lat) * R, dLon = (b.lon - a.lon) * R;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * R) * Math.cos(b.lat * R) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+export type Leg = { mode: 'walking' | 'transit' | 'train'; minutes: number; km: number };
+
+/**
+ * Estimation réaliste d'un trajet (sans horaires en direct) :
+ * à pied jusqu'à ~1,6 km (4,5 km/h, rues pas droites) ; métro/train en ville
+ * (≈ 28 km/h en moyenne + 12 min d'accès et d'attente) ; au-delà de 60 km, train rapide.
+ */
+export function estimateLeg(a: { lat: number; lon: number }, b: { lat: number; lon: number }): Leg {
+  const d = km(a, b);
+  if (d <= 1.6) return { mode: 'walking', minutes: Math.max(2, Math.round((d * 1.3) / 4.5 * 60)), km: d };
+  if (d <= 60) return { mode: 'transit', minutes: Math.round(12 + (d * 1.25) / 28 * 60), km: d };
+  return { mode: 'train', minutes: Math.round(25 + d / 150 * 60), km: d };
+}
+
+export const fmtMin = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, '0') : ''}`);
+export const fmtKm = (d: number) => (d < 1 ? `${Math.round(d * 1000 / 50) * 50} m` : `${d.toFixed(d < 10 ? 1 : 0).replace('.', ',')} km`);
+
+/** Itinéraire Google Maps entre deux points (ou depuis la position actuelle si pas de départ). */
+export function dirLink(to: { lat: number | null; lon: number | null; title: string; address?: string | null }, from?: { lat: number | null; lon: number | null } | null, mode: Leg['mode'] = 'transit'): string {
+  const dest = to.lat != null && to.lon != null ? `${to.lat},${to.lon}` : (to.address ? `${to.title} ${to.address}` : to.title);
+  const o = from && from.lat != null && from.lon != null ? `&origin=${from.lat},${from.lon}` : '';
+  return `https://www.google.com/maps/dir/?api=1${o}&destination=${encodeURIComponent(dest)}&travelmode=${mode === 'walking' ? 'walking' : 'transit'}`;
+}
