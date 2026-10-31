@@ -1,132 +1,146 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { LAND } from '../lib/land';
+import { useEffect, useRef } from 'react';
+import maplibregl, { type GeoJSONSource, type StyleSpecification } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 export type GlobePin = { id: string; name: string; lat: number; lon: number; color: string };
-type Props = { pins: GlobePin[]; photos: { lat: number; lon: number }[]; focus: string | null; home?: { lat: number; lon: number } };
+type Props = {
+  pins: GlobePin[];
+  photos: { lat: number; lon: number }[];
+  focus: string | null;
+  onPick?: (id: string) => void;
+  home?: { lat: number; lon: number };
+};
 
-const R = Math.PI / 180;
-const SIZE = 340, CX = SIZE / 2, CY = SIZE / 2, RAD = 150;
+// Carte gratuite et sans clé (OpenFreeMap). Palette « cosy » : terre crème, mer sauge, parcs vert tendre.
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+const PALETTE = { land: '#F4EEE3', water: '#B9D3D2', park: '#DCE4C9', ice: '#FBF9F4', border: '#CDBFA9', label: '#8A7D6B', halo: '#F4EEE3' };
 
-// Points de terre (vrais continents, grille de 3°), espacés selon la latitude.
-function landPoints() {
-  const pts: { la: number; lo: number; lat: number; lon: number }[] = [];
-  LAND.split('|').forEach((row, i) => {
-    const lat = 84 - i * 3;
-    const k = Math.max(1, Math.round(1 / Math.max(0.2, Math.cos(lat * R))));
-    const bits = row.split('').map((h) => parseInt(h, 16).toString(2).padStart(4, '0')).join('');
-    for (let j = 0; j < 120; j++) if (bits[j] === '1' && j % k === 0) {
-      const lon = -180 + j * 3;
-      pts.push({ la: lat * R, lo: lon * R, lat, lon });
-    }
+
+async function cosyStyle(): Promise<StyleSpecification> {
+  const s = (await (await fetch(STYLE_URL)).json()) as StyleSpecification;
+  s.projection = { type: 'globe' };
+  s.sky = { 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.6, 5, 0.2, 7, 0] } as StyleSpecification['sky'];
+  s.layers = s.layers.filter((l) => {
+    if (l.type === 'symbol') return false; // pas de noms : vos voyages sont les seules étiquettes
+    // Sur un globe, on garde l'essentiel : routes et bâtiments n'apparaissent qu'en zoomant.
+    return !/railway|aeroway|tunnel|building|bridge|pier|boundary_3|boundary_disputed/.test(l.id);
   });
-  return pts;
+  for (const l of s.layers) {
+    const p = (l.paint ??= {}) as Record<string, unknown>;
+    if (l.id === 'background') p['background-color'] = PALETTE.land;
+    else if (l.id === 'water') p['fill-color'] = PALETTE.water;
+    else if (l.id === 'waterway') p['line-color'] = PALETTE.water;
+    else if (l.id === 'park' || l.id === 'landcover_wood') { p['fill-color'] = PALETTE.park; p['fill-opacity'] = 0.8; }
+    else if (l.id.startsWith('landcover_')) p['fill-color'] = PALETTE.ice;
+    else if (l.id === 'landuse_residential') p['fill-opacity'] = 0;
+    else if (l.id.startsWith('boundary')) { p['line-color'] = PALETTE.border; delete p['line-dasharray']; }
+    else if (l.type === 'symbol') { p['text-color'] = PALETTE.label; p['text-halo-color'] = PALETTE.halo; p['text-halo-width'] = 1.4; }
+  }
+  return s;
 }
 
-export default function Globe({ pins, photos, focus, home = { lat: 46.6, lon: 2.3 } }: Props) {
-  const pts = useMemo(landPoints, []);
-  const [view, setView] = useState({ lon: 60, lat: 22 });
-  const target = useRef<{ lon: number; lat: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; lon: number; lat: number } | null>(null);
-  const idle = useRef(0);
-  const [phase, setPhase] = useState(0);
+// Arc (grand cercle) entre la maison et la destination.
+function arc(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const R = Math.PI / 180;
+  const v = (p: { lat: number; lon: number }) => [Math.cos(p.lat * R) * Math.cos(p.lon * R), Math.cos(p.lat * R) * Math.sin(p.lon * R), Math.sin(p.lat * R)];
+  const A = v(a), B = v(b);
+  const om = Math.acos(Math.max(-1, Math.min(1, A[0] * B[0] + A[1] * B[1] + A[2] * B[2])));
+  if (om < 0.01) return [];
+  const out: [number, number][] = [];
+  for (let i = 0; i <= 64; i++) {
+    const t = i / 64, s1 = Math.sin((1 - t) * om) / Math.sin(om), s2 = Math.sin(t * om) / Math.sin(om);
+    const x = A[0] * s1 + B[0] * s2, y = A[1] * s1 + B[1] * s2, z = A[2] * s1 + B[2] * s2;
+    out.push([Math.atan2(y, x) / R, Math.asin(z) / R]);
+  }
+  // Évite le saut à ±180° (traversée du Pacifique).
+  for (let i = 1; i < out.length; i++) while (out[i][0] - out[i - 1][0] > 180) out[i][0] -= 360;
+  for (let i = 1; i < out.length; i++) while (out[i - 1][0] - out[i][0] > 180) out[i][0] += 360;
+  return out;
+}
 
-  useEffect(() => {
+function pinEl(p: GlobePin, onPick?: (id: string) => void) {
+  const el = document.createElement('button');
+  el.className = 'gpin';
+  el.style.setProperty('--c', p.color);
+  el.setAttribute('aria-label', `Ouvrir ${p.name}`);
+  el.innerHTML = `<i></i><span>${p.name.replace(/[<>&]/g, '')}</span>`;
+  el.addEventListener('click', (e) => { e.stopPropagation(); onPick?.(p.id); });
+  return el;
+}
+
+export default function Globe({ pins, photos, focus, onPick, home = { lat: 46.6, lon: 2.3 } }: Props) {
+  const box = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<maplibregl.Marker[]>([]);
+  const ready = useRef(false);
+  const touched = useRef(0);
+  const latest = useRef({ pins, photos, home, onPick, focus });
+  latest.current = { pins, photos, home, onPick, focus };
+
+  const fly = () => {
+    const m = map.current; const { pins, focus } = latest.current;
     const p = pins.find((x) => x.id === focus);
-    if (p) target.current = { lon: p.lon, lat: Math.max(-35, Math.min(45, p.lat)) };
-  }, [focus, pins]);
+    if (!m || !ready.current || !p) return;
+    touched.current = performance.now();
+    m.flyTo({ center: [p.lon, Math.max(-40, Math.min(50, p.lat))], zoom: 0.95, duration: 1600, essential: true });
+  };
+
+  const draw = () => {
+    const m = map.current; if (!m || !ready.current) return;
+    const { pins, photos, home, onPick } = latest.current;
+    (m.getSource('arcs') as GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: pins.map((p) => ({ type: 'Feature', properties: { color: p.color }, geometry: { type: 'LineString', coordinates: arc(home, p) } }))
+    });
+    (m.getSource('photos') as GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: photos.map((p) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } }))
+    });
+    markers.current.forEach((k) => k.remove());
+    markers.current = pins.map((p) => new maplibregl.Marker({ element: pinEl(p, onPick), anchor: 'bottom' }).setLngLat([p.lon, p.lat]).addTo(m));
+    const h = document.createElement('span'); h.className = 'ghome'; h.setAttribute('aria-label', 'Maison');
+    markers.current.push(new maplibregl.Marker({ element: h }).setLngLat([home.lon, home.lat]).addTo(m));
+  };
 
   useEffect(() => {
-    let raf = 0, last = 0;
-    const tick = (t: number) => {
-      raf = requestAnimationFrame(tick);
-      if (t - last < 40) return; // ~25 images/s, léger pour la batterie
-      last = t;
-      setPhase((p) => (p + 0.015) % 1);
-      if (drag.current) return;
-      setView((v) => {
-        const tg = target.current;
-        if (tg) {
-          const d = ((tg.lon - v.lon + 540) % 360) - 180;
-          if (Math.abs(d) < 0.3 && Math.abs(tg.lat - v.lat) < 0.3) { target.current = null; idle.current = t; return v; }
-          return { lon: v.lon + d * 0.1, lat: v.lat + (tg.lat - v.lat) * 0.1 };
-        }
-        return t - idle.current > 3000 ? { ...v, lon: v.lon + 0.25 } : v;
+    let alive = true, raf = 0;
+    cosyStyle().then((style) => {
+      if (!alive || !box.current) return;
+      const m = new maplibregl.Map({
+        container: box.current, style, center: [60, 25], zoom: 0.35, minZoom: 0.1, maxZoom: 14,
+        attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, touchPitch: false, renderWorldCopies: false
       });
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+      m.touchZoomRotate.disableRotation();
+      map.current = m;
+      const stop = () => { touched.current = performance.now(); };
+      m.on('mousedown', stop); m.on('touchstart', stop); m.on('wheel', stop);
+      m.on('load', () => {
+        m.addSource('arcs', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        m.addSource('photos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        m.addLayer({ id: 'arcs', type: 'line', source: 'arcs', layout: { 'line-cap': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.75, 'line-dasharray': [0.1, 2.2] } });
+        m.addLayer({ id: 'photos', type: 'circle', source: 'photos', paint: { 'circle-radius': 4, 'circle-color': '#F2B544', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+        box.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+        ready.current = true;
+        draw(); fly();
+      });
+      // Rotation douce quand personne ne touche le globe (s'arrête dès qu'on zoome).
+      let last = 0;
+      const spin = (t: number) => {
+        raf = requestAnimationFrame(spin);
+        if (t - last < 50) return; last = t;
+        if (!ready.current || m.isMoving() || m.getZoom() > 1.5 || t - touched.current < 4000) return;
+        const c = m.getCenter(); m.setCenter([c.lng + 0.12, c.lat]);
+      };
+      raf = requestAnimationFrame(spin);
+    }).catch(() => { /* carte indisponible hors ligne : on garde l'emplacement vide */ });
+    return () => { alive = false; cancelAnimationFrame(raf); map.current?.remove(); map.current = null; ready.current = false; };
   }, []);
 
-  const l0 = view.lon * R, p0 = view.lat * R, sp = Math.sin(p0), cp = Math.cos(p0);
-  const proj = (la: number, lo: number, lift = 1) => {
-    const cl = Math.cos(la), d = lo - l0;
-    return { x: CX + RAD * lift * cl * Math.sin(d), y: CY - RAD * lift * (cp * Math.sin(la) - sp * cl * Math.cos(d)), z: sp * Math.sin(la) + cp * cl * Math.cos(d) };
-  };
-  const near = (lat: number, lon: number) => pins.find((p) => Math.abs(lat - p.lat) < 12 && Math.abs(((lon - p.lon + 540) % 360) - 180) < 18);
+  useEffect(draw, [pins, photos, home.lat, home.lon]);
 
-  const vec = (lat: number, lon: number) => [Math.cos(lat * R) * Math.cos(lon * R), Math.cos(lat * R) * Math.sin(lon * R), Math.sin(lat * R)];
-  const arc = (p: GlobePin) => {
-    const a = vec(home.lat, home.lon), b = vec(p.lat, p.lon);
-    const om = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
-    if (om < 0.01) return { d: '', m: null as null | { x: number; y: number } };
-    let d = '', pen = false, m: null | { x: number; y: number } = null;
-    for (let s = 0; s <= 40; s++) {
-      const t = s / 40, s1 = Math.sin((1 - t) * om) / Math.sin(om), s2 = Math.sin(t * om) / Math.sin(om);
-      const v = [a[0] * s1 + b[0] * s2, a[1] * s1 + b[1] * s2, a[2] * s1 + b[2] * s2];
-      const q = proj(Math.asin(v[2]), Math.atan2(v[1], v[0]), 1 + 0.15 * Math.sin(Math.PI * t));
-      if (q.z > -0.1) { d += (pen ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1); pen = true; } else pen = false;
-      if (s === Math.round(phase * 40) && q.z > -0.1) m = q;
-    }
-    return { d, m };
-  };
-
-  const onDown = (e: React.PointerEvent) => { drag.current = { x: e.clientX, y: e.clientY, ...view }; target.current = null; (e.target as Element).setPointerCapture?.(e.pointerId); };
-  const onMove = (e: React.PointerEvent) => {
-    const d = drag.current; if (!d) return;
-    setView({ lon: d.lon - (e.clientX - d.x) * 0.4, lat: Math.max(-60, Math.min(70, d.lat + (e.clientY - d.y) * 0.4)) });
-  };
-  const onUp = () => { drag.current = null; idle.current = performance.now(); };
+  useEffect(fly, [focus, pins]);
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" style={{ maxWidth: 380, display: 'block', margin: '0 auto', touchAction: 'none' }}
-      role="img" aria-label={`Globe de vos voyages : ${pins.map((p) => p.name).join(', ')}`}
-      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-      <defs>
-        <radialGradient id="gOcean" cx="0.38" cy="0.32" r="0.78"><stop offset="0" stopColor="#3D6BFF" /><stop offset="0.6" stopColor="#1A3FBF" /><stop offset="1" stopColor="#0B1E66" /></radialGradient>
-        <radialGradient id="gAtmo" cx="0.5" cy="0.5" r="0.5"><stop offset="0.84" stopColor="#6E8FFF" stopOpacity="0" /><stop offset="0.9" stopColor="#6E8FFF" stopOpacity="0.35" /><stop offset="1" stopColor="#6E8FFF" stopOpacity="0" /></radialGradient>
-        <radialGradient id="gShine" cx="0.32" cy="0.26" r="0.45"><stop offset="0" stopColor="#fff" stopOpacity="0.35" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></radialGradient>
-      </defs>
-      <circle cx={CX} cy={CY} r={RAD + 22} fill="url(#gAtmo)" />
-      <circle cx={CX} cy={CY} r={RAD} fill="url(#gOcean)" />
-      {pts.map((p, i) => {
-        const q = proj(p.la, p.lo);
-        if (q.z <= 0.02) return null;
-        const pin = near(p.lat, p.lon);
-        const c = pin ? pin.color : Math.abs(p.lat) > 60 ? '#E8F1FF' : Math.abs(p.lat) < 25 ? '#5BE08D' : '#34C46E';
-        return <circle key={i} cx={q.x} cy={q.y} r={1.05 + q.z} fill={c} fillOpacity={0.25 + 0.75 * q.z} />;
-      })}
-      <circle cx={CX} cy={CY} r={RAD} fill="url(#gShine)" />
-      <circle cx={CX} cy={CY} r={RAD} fill="none" stroke="#9DB4FF" strokeOpacity="0.5" />
-      {photos.map((ph, i) => { const q = proj(ph.lat * R, ph.lon * R); return q.z > 0.05 ? <circle key={'ph' + i} cx={q.x} cy={q.y} r={2.2} fill="#FFD23F" stroke="#fff" strokeWidth="0.8" /> : null; })}
-      {pins.map((p) => { const a = arc(p); return (
-        <g key={'a' + p.id}>
-          {a.d && <path d={a.d} fill="none" stroke={p.color} strokeWidth="2" strokeLinecap="round" strokeDasharray="1 5" />}
-          {a.m && <circle cx={a.m.x} cy={a.m.y} r="3" fill="#fff" stroke={p.color} strokeWidth="2" />}
-        </g>
-      ); })}
-      {pins.map((p) => {
-        const q = proj(p.lat * R, p.lon * R);
-        if (q.z < 0.08) return null;
-        const on = p.id === focus;
-        return (
-          <g key={'p' + p.id} transform={`translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`}>
-            <circle r="10" fill="none" stroke={p.color} strokeWidth="1.5"><animate attributeName="r" values="6;22" dur="2.2s" repeatCount="indefinite" /><animate attributeName="opacity" values="0.9;0" dur="2.2s" repeatCount="indefinite" /></circle>
-            <circle r={on ? 7 : 5} fill={p.color} stroke="#fff" strokeWidth="2.5" />
-            {on && <g transform="translate(12 -30)"><rect rx="9" height="22" width={p.name.length * 7.4 + 18} fill="#fff" /><text x="9" y="15" fontSize="12" fontWeight="600" fill="#0E0E0E" fontFamily="Inter Tight, sans-serif">{p.name}</text></g>}
-          </g>
-        );
-      })}
-      {(() => { const q = proj(home.lat * R, home.lon * R); return q.z > 0.08 ? <circle cx={q.x} cy={q.y} r="4" fill="#fff" stroke="#0E0E0E" strokeWidth="2" /> : null; })()}
-    </svg>
+    <div ref={box} className="globe" role="region" aria-label={`Globe de vos voyages : ${pins.map((p) => p.name).join(', ') || 'aucun voyage placé'}`} />
   );
 }

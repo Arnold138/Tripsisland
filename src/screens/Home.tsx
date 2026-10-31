@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { supabase, type Trip } from '../lib/supabase';
 import { daysUntil } from '../lib/logic';
 import TripForm from './TripForm';
-import Globe from './Globe';
 import type { Ctx } from '../App';
+
+const Globe = lazy(() => import('./Globe'));
 
 const fmt = (d: string | null) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
@@ -64,7 +65,10 @@ export default function Home({ ctx, onTastes, onOpen }: { ctx: Ctx; onTastes: ()
       </header>
 
       <div style={{ marginTop: 8 }}>
-        <Globe pins={trips.filter((t) => t.lat != null && t.lon != null).map((t) => ({ id: t.id, name: t.title, lat: t.lat!, lon: t.lon!, color: t.color }))} photos={photoPts} focus={focus} />
+        <Suspense fallback={<div className="globe" />}>
+          <Globe pins={trips.filter((t) => t.lat != null && t.lon != null).map((t) => ({ id: t.id, name: t.title, lat: t.lat!, lon: t.lon!, color: t.color }))} photos={photoPts} focus={focus}
+            onPick={(id) => { const t = trips.find((x) => x.id === id); if (t) onOpen(t); }} />
+        </Suspense>
       </div>
       <div className="days" role="group" aria-label="Voir sur le globe" style={{ marginTop: 4 }}>
         {trips.map((t) => (

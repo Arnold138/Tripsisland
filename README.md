@@ -2,6 +2,12 @@
 
 Vos voyages à deux : un espace partagé, synchronisé en direct entre vos deux téléphones.
 
+## Nouveautés de la version 0.4 — Globe cosy et coups de cœur
+- **Nouveau globe** : une vraie carte du monde en 3D, aux couleurs douces (terre crème, mer sauge). On le tourne et on zoome au doigt ; toucher l'étiquette d'un voyage l'ouvre. Carte gratuite, sans clé.
+- **Tes coups de cœur** : dans Idées, la liste de tes ♥ avec l'état de l'autre (en attente, oui, non) et un bouton **Ajouter** pour mettre l'idée tout de suite dans son jour.
+- Un match ou un ajout arrive **directement dans le bon jour** du programme.
+- **Plus d'appels payants en double** : un seul appel à la fois, même si on tape deux fois.
+
 ## Nouveautés de la version 0.3 — Globe, souvenirs et filtres
 - **Globe 3D sur l'accueil** : vrais continents en points, vos voyages en couleur, arcs depuis la France, rotation au doigt, toucher un voyage pour y aller.
 - **Souvenirs** : ajoutez vos photos à un voyage ; leur lieu GPS et leur date s'affichent sur le globe (points jaunes).
