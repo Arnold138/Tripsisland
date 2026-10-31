@@ -1,0 +1,65 @@
+// Génère des idées d'activités (Claude Haiku) selon les goûts du couple, puis les enregistre pour le swipe.
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
+const TASTE: Record<string, string> = {
+  marche: 'marche et randonnée', street: 'street food', gastro: 'gastronomie', temples: 'temples', onsen: 'onsen',
+  nuit: 'vie nocturne', shopping: 'shopping', musees: 'musées', anime: 'anime et jeux vidéo', photo: 'photo',
+  ateliers: 'ateliers (cuisine, artisanat)', nature: 'nature'
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) return json({ error: 'Clé Claude absente côté serveur.' }, 503);
+
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
+  });
+  let body: { trip_id?: string; city?: string };
+  try { body = await req.json(); } catch { return json({ error: 'Requête invalide.' }, 400); }
+  if (!body.trip_id) return json({ error: 'Voyage manquant.' }, 400);
+
+  // RLS : ne renvoie le voyage que si l'utilisateur en est membre.
+  const { data: trip } = await sb.from('trips').select('id, island_id, title, start_date, end_date').eq('id', body.trip_id).single();
+  if (!trip) return json({ error: 'Voyage introuvable.' }, 404);
+  const { data: members } = await sb.from('island_members').select('user_id').eq('island_id', trip.island_id);
+  const { data: profs } = await sb.from('profiles').select('tastes, pace').in('id', (members ?? []).map((m) => m.user_id));
+  const { data: existing } = await sb.from('ideas').select('title').eq('trip_id', trip.id);
+
+  const all = (profs ?? []).flatMap((p) => p.tastes ?? []);
+  const common = all.filter((t, i) => all.indexOf(t) !== i);
+  const tastes = [...new Set(all)].map((t) => TASTE[t] ?? t);
+  const prompt = `Tu aides un couple à préparer son voyage "${trip.title}" (${trip.start_date} → ${trip.end_date})${body.city ? `, en ce moment pour la ville : ${body.city}` : ''}.
+Leurs goûts : ${tastes.join(', ') || 'non précisés'}. Goûts communs prioritaires : ${[...new Set(common)].map((t) => TASTE[t] ?? t).join(', ') || 'aucun'}.
+Déjà proposé (à ne pas répéter) : ${(existing ?? []).map((e) => e.title).join(' ; ') || 'rien'}.
+Propose 8 activités réelles, variées, adaptées à la saison. Réponds UNIQUEMENT par un tableau JSON, sans texte autour :
+[{"title":"…","city":"…","why":"une phrase qui relie l'activité à leurs goûts","tag":"MARCHE|STREET FOOD|GASTRONOMIE|TEMPLES|ONSEN|NUIT|SHOPPING|MUSÉE|ANIME|PHOTO|ATELIER|NATURE","price":"estimation en yens, ex. ≈ 2 000 ¥ / pers, ou Gratuit","duration":"ex. 2 h","query":"nom exact du lieu pour une recherche Google Maps"}]`;
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!r.ok) return json({ error: 'IA indisponible pour le moment.' }, 502);
+  const out = await r.json();
+  const text: string = out.content?.[0]?.text ?? '';
+  let list: any[] = [];
+  try { list = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); } catch { return json({ error: 'Réponse IA illisible, réessaie.' }, 502); }
+
+  // Validation stricte avant écriture.
+  const s = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : null);
+  const rows = list.filter((x) => x && typeof x.title === 'string').slice(0, 8).map((x) => ({
+    trip_id: trip.id, title: s(x.title, 120)!, city: s(x.city, 60), why: s(x.why, 300), tag: s(x.tag, 20),
+    price: s(x.price, 40), duration: s(x.duration, 30), query: s(x.query, 120)
+  }));
+  if (!rows.length) return json({ error: 'Aucune idée reçue, réessaie.' }, 502);
+  const { error } = await sb.from('ideas').insert(rows);
+  if (error) return json({ error: error.message }, 400);
+  return json({ count: rows.length });
+});
