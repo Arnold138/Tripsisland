@@ -11,6 +11,7 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
   const [d, setD] = useState<string>(activity ? activity.day ?? '' : day ?? '');
   const [time, setTime] = useState(activity?.time ?? '');
   const [notes, setNotes] = useState(activity?.notes ?? '');
+  const [why, setWhy] = useState(activity?.why ?? '');
   const [place, setPlace] = useState<Pick<Place, 'id' | 'address' | 'lat' | 'lon'> | null>(
     activity?.place_id ? { id: activity.place_id, address: activity.address ?? '', lat: activity.lat, lon: activity.lon } : null);
   const [q, setQ] = useState('');
@@ -44,7 +45,7 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
     e.preventDefault();
     if (!title.trim()) { setErr('Donne un nom à l’activité.'); return; }
     const row = {
-      title: title.trim(), day: d || null, time: time || null, notes: notes.trim() || null,
+      title: title.trim(), day: d || null, time: time || null, notes: notes.trim() || null, why: why.trim() || null,
       place_id: place?.id ?? null, address: place?.address ?? null, lat: place?.lat ?? null, lon: place?.lon ?? null,
       // Sans lieu choisi, la carte le cherchera une fois à partir du nom.
       geo_tried: place?.lat != null || (activity?.title === title.trim() && !!activity?.geo_tried),
@@ -94,6 +95,8 @@ export default function ActivitySheet({ tripId, days, day, activity, onClose }: 
         </div>
         <div className="field"><label htmlFor="an">Notes</label>
           <input id="an" className="input" placeholder="Conseil, réservation, prix…" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+        <div className="field"><label htmlFor="aw">Pourquoi (bouton i)</label>
+          <textarea id="aw" className="input area" rows={3} placeholder="Pourquoi ici, pourquoi ce jour-là…" value={why} onChange={(e) => setWhy(e.target.value)} /></div>
         {err && <p className="err" role="alert">{err}</p>}
         <button className="btn">{activity ? 'Enregistrer' : 'Ajouter'}</button>
         {activity && (

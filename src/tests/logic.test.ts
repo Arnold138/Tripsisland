@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commonTastes, daysUntil, inviteLink, parseInviteCode } from '../lib/logic';
+import { paragraphs, commonTastes, daysUntil, inviteLink, parseInviteCode } from '../lib/logic';
 
 describe('invitations', () => {
   it('lit un code dans un lien ou un texte', () => {
@@ -70,5 +70,13 @@ import { cleanQuery } from '../screens/Search';
 describe('recherche', () => {
   it('nettoie un texte collé depuis TikTok', () => {
     expect(cleanQuery('🎋 Forêt de bambous #kyoto #japan https://vm.tiktok.com/abc @lea')).toBe('Forêt de bambous kyoto japan lea');
+  });
+});
+
+describe('explications', () => {
+  it('découpe en paragraphes et ignore le vide', () => {
+    expect(paragraphs('Un.\n\nDeux\n  \nTrois')).toEqual(['Un.', 'Deux', 'Trois']);
+    expect(paragraphs(null)).toEqual([]);
+    expect(paragraphs('   ')).toEqual([]);
   });
 });
