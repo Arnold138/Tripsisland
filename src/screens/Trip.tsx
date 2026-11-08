@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase, type Activity, type Idea, type Message, type Swipe, type Trip as TripT } from '../lib/supabase';
+import { supabase, type Activity, type DayPlan, type Idea, type Message, type Swipe, type Trip as TripT } from '../lib/supabase';
 import { tripDays } from '../lib/logic';
 import { geocodeActivity } from '../lib/geo';
 import ActivitySheet from './ActivitySheet';
@@ -17,7 +17,7 @@ const MapTab = lazy(() => import('./tabs/MapTab'));
 export type Tab = 'now' | 'days' | 'map' | 'match' | 'us';
 export type Presence = { tab: Tab; day: string | null; at: number } | null;
 export type TripData = {
-  ctx: Ctx; trip: TripT; days: string[]; acts: Activity[]; ideas: Idea[]; swipes: Swipe[]; messages: Message[];
+  ctx: Ctx; trip: TripT; days: string[]; acts: Activity[]; plans: Record<string, DayPlan>; ideas: Idea[]; swipes: Swipe[]; messages: Message[];
   partnerName: string; partnerHere: Presence;
   go: (tab: Tab, day?: string | null) => void; edit: (a: Activity | 'new', day?: string | null) => void;
   reload: () => void; toggleDone: (a: Activity) => void;
@@ -42,6 +42,7 @@ export default function Trip({ ctx, trip: initial, onBack, initialTab, initialDa
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [swipes, setSwipes] = useState<Swipe[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [plans, setPlans] = useState<Record<string, DayPlan>>({});
   const [sheet, setSheet] = useState<{ a: Activity | null; day: string | null } | null>(null);
   const [editTrip, setEditTrip] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -51,12 +52,14 @@ export default function Trip({ ctx, trip: initial, onBack, initialTab, initialDa
   const partnerName = partner?.name?.split(' ')[0] ?? 'ton binôme';
 
   const load = useCallback(async () => {
-    const [t, a, i, m] = await Promise.all([
+    const [t, a, i, m, p] = await Promise.all([
       supabase.from('trips').select('*').eq('id', trip.id).single(),
       supabase.from('activities').select('*').eq('trip_id', trip.id),
       supabase.from('ideas').select('*').eq('trip_id', trip.id).order('created_at'),
-      supabase.from('messages').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false }).limit(150)
+      supabase.from('messages').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false }).limit(150),
+      supabase.from('day_plans').select('trip_id,day,city,why').eq('trip_id', trip.id)
     ]);
+    setPlans(Object.fromEntries(((p.data ?? []) as DayPlan[]).map((x) => [x.day, x])));
     if (t.data) setTrip(t.data as TripT);
     const list = (a.data ?? []) as Activity[];
     setActs(list);
@@ -85,6 +88,7 @@ export default function Trip({ ctx, trip: initial, onBack, initialTab, initialDa
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activities', filter: f }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ideas', filter: f }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: f }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'day_plans', filter: f }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'swipes' }, load)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: `id=eq.${trip.id}` }, load)
       .subscribe();
@@ -113,7 +117,7 @@ export default function Trip({ ctx, trip: initial, onBack, initialTab, initialDa
     await supabase.from('activities').update({ done: !a.done, done_at: a.done ? null : new Date().toISOString() }).eq('id', a.id);
   };
   const data: TripData = {
-    ctx, trip, days, acts, ideas, swipes, messages, partnerName, partnerHere, go,
+    ctx, trip, days, acts, plans, ideas, swipes, messages, partnerName, partnerHere, go,
     edit: (a, d) => setSheet({ a: a === 'new' ? null : a, day: d === undefined ? day : d }), reload: load, toggleDone
   };
   const myVoted = new Set(swipes.filter((s) => s.user_id === me.id).map((s) => s.idea_id));

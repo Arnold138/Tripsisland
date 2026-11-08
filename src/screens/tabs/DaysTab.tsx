@@ -3,6 +3,7 @@ import { supabase, type Activity } from '../../lib/supabase';
 import { CrowdBadge, CrowdSheet, fetchCrowd, type CrowdInfo } from '../Crowd';
 import { byTime, dirLink, estimateLeg, fmtKm, fmtMin, type Leg } from '../../lib/logic';
 import Icon from '../Icon';
+import InfoButton from '../Info';
 import { longDay, type TripData } from '../Trip';
 
 const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '').toUpperCase();
@@ -41,6 +42,7 @@ export function ActivityCard({ a, d, from }: { a: Activity; d: TripData; from?: 
         )}
       </button>
       <div className="act2-meta">
+        <InfoButton kicker={a.day ? longDay(a.day) : 'À placer'} title={a.title} text={a.why} />
         <CrowdBadge crowd={crowd} busy={busy} onClick={() => (crowd ? setOpen(true) : estimate())} />
         {err && <span className="err" style={{ margin: 0, fontSize: 12 }}>{err}</span>}
       </div>
@@ -79,7 +81,8 @@ export function LegRow({ a, b }: { a: Activity; b: Activity }) {
 }
 
 export default function DaysTab({ d, day, setDay }: { d: TripData; day: string | null; setDay: (x: string | null) => void }) {
-  const { acts, days } = d;
+  const { acts, days, plans, trip } = d;
+  const plan = day ? plans[day] : undefined;
   const unplaced = acts.filter((a) => !a.day);
   const list = byTime(day === null ? unplaced : acts.filter((a) => a.day === day));
   const count = (x: string) => acts.filter((a) => a.day === x).length;
@@ -96,6 +99,7 @@ export default function DaysTab({ d, day, setDay }: { d: TripData; day: string |
         {days.map((x, i) => (
           <button key={x} className="day" aria-pressed={day === x} onClick={() => setDay(x)} aria-label={`Jour ${i + 1}, ${longDay(x)}, ${count(x)} activités`}>
             <small>{short(x)}</small><b>{num(x)}</b>
+            {plans[x]?.city && <em className="day-city">{plans[x].city}</em>}
             <span className="pips">{Array.from({ length: Math.min(3, count(x)) }).map((_, k) => <i key={k} />)}</span>
           </button>
         ))}
@@ -106,10 +110,18 @@ export default function DaysTab({ d, day, setDay }: { d: TripData; day: string |
         </button>
       )}
 
+      {trip.why && <InfoBar title="Pourquoi ce programme" text={trip.why} />}
+
       <div className="day-head">
         <div>
           <p className="mono" style={{ margin: 0 }}>{day ? `Jour ${idx + 1} sur ${days.length}` : 'Pas encore de jour'}</p>
           <h2>{day ? longDay(day) : 'À placer'}</h2>
+          {day && (plan?.city || plan?.why) && (
+            <div className="row" style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+              {plan?.city && <span className="city-chip"><Icon name="pin" size={14} />{plan.city}</span>}
+              <InfoButton kicker={`Jour ${idx + 1}`} title={`${longDay(day)}${plan?.city ? ' · ' + plan.city : ''}`} text={plan?.why} label="Pourquoi ce jour" />
+            </div>
+          )}
           {!day && <p className="sub" style={{ margin: '2px 0 0', fontSize: 14 }}>Touchez un jour sous chaque lieu pour le planifier.</p>}
         </div>
         {day && <div className="row" style={{ gap: 6 }}>
@@ -148,5 +160,15 @@ export default function DaysTab({ d, day, setDay }: { d: TripData; day: string |
         <button className="btn ghost" onClick={() => d.go('match')}><Icon name="heart" /> Depuis les idées</button>
       </div>
     </section>
+  );
+}
+
+/** Bandeau repliable en haut des jours : la logique globale du voyage. */
+function InfoBar({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="info-bar">
+      <Icon name="info" size={18} /><span>{title}</span>
+      <InfoButton kicker="Le plan" title={title} text={text} label="Lire" />
+    </div>
   );
 }

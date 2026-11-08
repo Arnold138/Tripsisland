@@ -92,3 +92,7 @@ export function dirLink(to: { lat: number | null; lon: number | null; title: str
   const o = from && from.lat != null && from.lon != null ? `&origin=${from.lat},${from.lon}` : '';
   return `https://www.google.com/maps/dir/?api=1${o}&destination=${encodeURIComponent(dest)}&travelmode=${mode === 'walking' ? 'walking' : 'transit'}`;
 }
+
+/** Découpe une explication en paragraphes (lignes vides) pour la fiche « i ». */
+export const paragraphs = (t: string | null | undefined): string[] =>
+  (t ?? '').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);

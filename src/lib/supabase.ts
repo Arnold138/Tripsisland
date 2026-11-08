@@ -13,13 +13,15 @@ export type Island = { id: string; name: string; invite_code: string; created_by
 export type Trip = {
   id: string; island_id: string; title: string; country: string | null;
   start_date: string | null; end_date: string | null; status: 'upcoming' | 'past'; color: string;
-  lat: number | null; lon: number | null;
+  lat: number | null; lon: number | null; why?: string | null;
 };
+/** Ville du jour + explication du choix (bouton « i »). */
+export type DayPlan = { trip_id: string; day: string; city: string | null; why: string | null };
 export type Activity = {
   id: string; trip_id: string; day: string | null; time: string | null; title: string; place_id: string | null;
   address: string | null; lat: number | null; lon: number | null; notes: string | null; tag: string | null; done: boolean;
   created_by: string | null; station: string | null; query: string | null; geo_tried: boolean;
-  done_at: string | null; created_at: string; updated_at: string | null; crowd?: unknown | null;
+  done_at: string | null; created_at: string; updated_at: string | null; crowd?: unknown | null; why?: string | null;
 };
 export type Message = { id: string; trip_id: string; user_id: string; body: string; created_at: string };
 export type Idea = {
